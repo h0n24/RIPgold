@@ -39,6 +39,10 @@ function RIPgold:new(o)
     self.__index = self 
 
     -- initialize variables here
+    self.tSavedVariables = {}
+	self.hlp = {} -- all helpers
+	self.set = {} -- all settings
+	self.rat = {}
 
     return o
 end
@@ -87,6 +91,8 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterSlashCommand("rip", "OnRIPgoldOn", self)
 		Apollo.RegisterSlashCommand("rap", "HowManyFails", self)
 
+		Apollo.RegisterEventHandler("WindowMove", "OnWindowSizeChanged", self)
+
 		-- Do additional Addon initialization here
 		Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
 		Apollo.RegisterEventHandler("CombatLogDamage", "OnCombatLogDamage", self)
@@ -110,9 +116,6 @@ function RIPgold:OnDocLoaded()
 		self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
 		self.updateStatsUI:Stop()
 
-		self.hlp = {} -- all helpers
-		self.set = {} -- all settings
-
 		self.hlp.isBossDead = {}
 		self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "ALL_checkForBossDeaths", self)
 		self.hlp.isBossDead.timer:Stop()
@@ -123,28 +126,41 @@ function RIPgold:OnDocLoaded()
 		self.hlp.doesChannelerExists = ApolloTimer.Create(1, true, "STL:checkForChannelerDeaths(self)", self)
 		self.hlp.doesChannelerExists:Stop()
 
-		self.hlp.peMatch = nil
-		self.hlp.isInDungeon = false
+		if self.tSavedVariables == nil then
 
-		self:InitializeVars()
+			self.hlp.peMatch = nil
+			self.hlp.isInDungeon = false
 
-		if not GroupLib.InRaid() then
-			self:PreparePlayers()
+			self:InitializeVars()
+
+			if not GroupLib.InRaid() then
+				self:PreparePlayers()
+			end
+
+			-- has to be outside InitializeVars() becouse it would get reseted after game creates Channelers
+			self.hlp.WindInvokerChanellerID = { 
+				[1] = 0, [2] = 0, [3] = 0, [4] = 0 
+			}
+
+
+			self.set.sound = true
+			-- additional sounds: self:PlaySound(Sound.PlayUIQueuePopsAdventure)
+			-- additional sounds: self:PlaySound(Sound.PlayUI47CancelVirtual)
+			self.set.soundType = Sound.PlayUI11To13GenericPushButtonDigital02
 		end
 
-		-- has to be outside InitializeVars() becouse it would get reseted after game creates Channelers
-		self.hlp.WindInvokerChanellerID = { 
-			[1] = 0, [2] = 0, [3] = 0, [4] = 0 
-		}
+		if self.rat == nil then
+			local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+			self.rat[getCurrentPlayerName] = {}
+			self.rat[getCurrentPlayerName]["fails"] = 0
+			self.rat[getCurrentPlayerName]["rating"] = 1000
+			self.rat[getCurrentPlayerName]["dungs"] = 0
+		end
 
 		--- testing purposes
-		self.set.sound = true
-		-- additional sounds: self:PlaySound(Sound.PlayUIQueuePopsAdventure)
-		-- additional sounds: self:PlaySound(Sound.PlayUI47CancelVirtual)
-		self.set.soundType = Sound.PlayUI11To13GenericPushButtonDigital02
-
 		--self.hlp.isInDungeon = true
 		--self.hlp.boss["Blade-Wind the Invoker"] = true
+
 
 	end
 end
@@ -159,36 +175,39 @@ function RIPgold:OnInterfaceMenuListHasLoaded()
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "RIPgold", {"ToggleRIPgoldUI", "", ""}) --IconSprites:Icon_Windows_UI_CRB_Rival icon before (terrible meh)
 end
 
+function RIPgold:addToSet(set, key) -- not using, future reference
+    set[key] = true
+end
+
+function RIPgold:removeFromSet(set, key) -- not using, future reference
+    set[key] = nil
+end
+
+function RIPgold:setContains(set, key)
+    return set[key] ~= nil
+end
+
 -- on SlashCommand "/rip"
 function RIPgold:OnRIPgoldOn()
 
 	self.updateStatsUI:Start()
 
 	self:UpdateRIPgoldStatsUI()
-	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(1)
+	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(0)
 
 	self.wndMain:Invoke() -- show the window
 
-	-- self:Debug(self.hlp.player[1].name .. ": " .. self.hlp.player[1].fails)
-	-- self:Debug(self.hlp.player[2].name .. ": " .. self.hlp.player[2].fails)
-	-- self:Debug(self.hlp.player[3].name .. ": " .. self.hlp.player[3].fails)
-	-- self:Debug(self.hlp.player[4].name .. ": " .. self.hlp.player[4].fails)
-	-- self:Debug(self.hlp.player[5].name .. ": " .. self.hlp.player[5].fails)
+	SendVarToRover("self.tSavedVariables",self.tSavedVariables)
 
-end
+	--SendVarToRover("self.rat",self.tSavedVariables)
 
-function RIPgold:UpdateRIPgoldStatsUI()
+	--table.insert("test", self.rat)	
 
-	for i=1,5 do
-		if self.hlp.player[i].name ~= "" then
-
-			self.wndMain:FindChild("WIN_stats"):FindChild("INFO_fails_name_"..i):SetText(self.hlp.player[i].name)
-			self.wndMain:FindChild("WIN_stats"):FindChild("INFO_fails_stat_"..i):SetText(self.hlp.player[i].fails)
-		else
-			self.wndMain:FindChild("INFO_fails_name_"..i):SetText("")
-			self.wndMain:FindChild("INFO_fails_stat_"..i):SetText("")
-		end
-	end
+	self:Debug(self.hlp.player[1].name .. ": " .. self.hlp.player[1].fails)
+	self:Debug(self.hlp.player[2].name .. ": " .. self.hlp.player[2].fails)
+	self:Debug(self.hlp.player[3].name .. ": " .. self.hlp.player[3].fails)
+	self:Debug(self.hlp.player[4].name .. ": " .. self.hlp.player[4].fails)
+	self:Debug(self.hlp.player[5].name .. ": " .. self.hlp.player[5].fails)
 
 end
 
@@ -201,6 +220,55 @@ function RIPgold:HowManyFails()
 			self:InformOthers(self.hlp.player[i].name .. ": " .. self.hlp.player[i].fails, false)
 		end
 	end
+
+	-- new function new rat
+	for i=1,5 do
+		if self.hlp.player[i].name ~= "" then
+
+			-- human readable fails
+			local failWord = "fails"
+			if self.hlp.player[i].fails == 1 then
+				failWord = "fail"
+			end
+
+			-- supernew function
+			--if self.rat ~= nil then
+			if RIPgold:setContains(self.rat, self.hlp.player[i].name) then
+				
+				local rating = self.rat[self.hlp.player[i].name]["rating"]
+				if self.hlp.player[i].fails > 0 then
+					rating = rating - self.hlp.player[i].fails
+				else
+					rating = rating + 50
+				end
+
+				self.rat[self.hlp.player[i].name]["fails"] = self.rat[self.hlp.player[i].name]["fails"] + self.hlp.player[i].fails
+				self.rat[self.hlp.player[i].name]["rating"] = rating
+				self.rat[self.hlp.player[i].name]["dungs"] = self.rat[self.hlp.player[i].name]["dungs"] + 1
+			else
+
+				local rating = 1000
+				if self.hlp.player[i].fails > 0 then
+					rating = rating - self.hlp.player[i].fails
+				else
+					rating = rating + 50
+				end
+
+				self.rat[self.hlp.player[i].name] = {}
+				self.rat[self.hlp.player[i].name]["fails"] = self.hlp.player[i].fails
+				self.rat[self.hlp.player[i].name]["rating"] = rating
+				self.rat[self.hlp.player[i].name]["dungs"] = 1
+			end
+			--end
+
+			sToChat = string.format("%s %s, %s rating", self.hlp.player[i].fails, failWord, self.rat[self.hlp.player[i].name]["rating"])
+			self:Debug(self.hlp.player[i].name .. ": ".. sToChat)
+		end
+	end
+
+	SendVarToRover("self.rat",self.rat)
+
+
 end
 
 function RIPgold:InitializeVars()
@@ -230,11 +298,6 @@ function RIPgold:InitializeVars()
 		["Iruki Boldbeard"] = false,
 		["Wrathbone"] = false,
 	}
-
-	self.hlp.nPoints = 0
-	self.hlp.nBronze = 0
-	self.hlp.nSilver = 0
-	self.hlp.nGold = 0
 
 	self.hlp.SelenePercentage = 0
 	self.hlp.TrogunStacks = 0
@@ -368,13 +431,8 @@ function RIPgold:OnPublicEventStart()
 				self:PreparePlayers()
 
 				self.checkDeadState:Start()
-
-				self.hlp.nPoints = peCurrent:GetRewardThreshold(PublicEvent.PublicEventRewardTier_None)
-				self.hlp.nBronze = peCurrent:GetRewardThreshold(PublicEvent.PublicEventRewardTier_Bronze)
-				self.hlp.nSilver = peCurrent:GetRewardThreshold(PublicEvent.PublicEventRewardTier_Silver)
-				self.hlp.nGold = peCurrent:GetRewardThreshold(PublicEvent.PublicEventRewardTier_Gold)
 					
-				self.hlp.peMatch = peCurrent
+				self.hlp.peMatch = true
 
 				SendVarToRover("self", self)
 				
@@ -511,16 +569,16 @@ function RIPgold:OnUnitCreated(unit)
 end
 
 function RIPgold:ALL_precheckForBossDeaths(unitInCombat)
-	--if self.hlp.isInDungeon then 
+	if self.hlp.isInDungeon then 
 		self.hlp.isBossDead.dead = false
 		self.hlp.isBossDead.name = unitInCombat:GetName()
 		self.hlp.isBossDead.ID = unitInCombat:GetId()
 		self.hlp.isBossDead.timer:Start()
-	--end
+	end
 end
 
 function RIPgold:ALL_checkForBossDeaths()
-	--if self.hlp.isInDungeon then 
+	if self.hlp.isInDungeon then 
 
 		function doesBossExist()
 		   local isBossDead = GameLib.GetUnitById(self.hlp.isBossDead.ID):IsDead() ~= nil
@@ -562,7 +620,7 @@ function RIPgold:ALL_checkForBossDeaths()
 				--SendVarToRover("boss", self.hlp.isBossDead)
 			end
 		end
-	--end
+	end
 end
 
 function RIPgold:OnUnitDestroyed(unit)
@@ -621,7 +679,8 @@ function RIPgold:SendToChat(fnString)
 		ChatSystemLib.Command("/p "..fnString)
 		--self:Debug(fnString)
 	else
-		self:Debug(fnString)
+		ChatSystemLib.Command("/s "..fnString)
+		--self:Debug(fnString)
 	end
 end
 
@@ -701,42 +760,162 @@ function RIPgold:OnCancel()
 	self.updateStatsUI:Stop()
 end
 
+function RIPgold:UpdateRIPgoldStatsUI()
+
+
+	self.wndMain:FindChild("TABLE_stats"):DeleteAll()
+	local rowsNumber = 0
+	for i=1,5 do
+		if self.hlp.player[i].name ~= "" then
+			rowsNumber = rowsNumber + 1
+			local tRow = self.wndMain:FindChild("TABLE_stats"):AddRow("")
+	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 1, self.hlp.player[i].name)
+
+	    	function GetRating()
+		   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
+			end
+
+			if pcall(GetRating) then
+				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, self.rat[self.hlp.player[i].name]["rating"])
+			else
+				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
+			end
+
+	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
+		end
+	end
+
+	local tableWidth = self.wndMain:GetWidth() - 70
+	local tableHeight = rowsNumber*25 + 30
+    self.wndMain:FindChild("TABLE_stats"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
+
+	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
+
+end
+
 -- when top buttons (cards) are clicked
 function RIPgold:OnBTN_statsClick()
 	self.wndMain:FindChild("WIN_stats"):Show(true)
+	self.wndMain:FindChild("WIN_ratings"):Show(false)
 	self.wndMain:FindChild("WIN_custom"):Show(false)
 	self.wndMain:FindChild("WIN_settings"):Show(false)
 
 	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("ef000000")
+	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
 
-	self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(1)
+	if self.hlp.isInDungeon then
+		self.wndMain:FindChild("INFO_stats"):SetText("Current dungeon")
+	else
+		self.wndMain:FindChild("INFO_stats"):SetText("Last dungeon")
+	end
+
+	self.wndMain:FindChild("TABLE_stats"):DeleteAll()
+	local rowsNumber = 0
+	for i=1,5 do
+		if self.hlp.player[i].name ~= "" then
+			rowsNumber = rowsNumber + 1
+			local tRow = self.wndMain:FindChild("TABLE_stats"):AddRow("")
+	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 1, self.hlp.player[i].name)
+
+	    	function GetRating()
+		   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
+			end
+
+			if pcall(GetRating) then
+				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, self.rat[self.hlp.player[i].name]["rating"])
+			else
+				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
+			end
+
+	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
+		end
+	end
+
+	local tableWidth = self.wndMain:GetWidth() - 50
+	local tableHeight = rowsNumber*25 + 30
+    self.wndMain:FindChild("TABLE_stats"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
+
+	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
+
+end
+
+function RIPgold:OnWindowSizeChanged()
+	self:Debug("window changed")
+	RIPgold:OnSizeChange_rating(self)
+end
+
+function RIPgold:OnSizeChange_rating(self)
+	local rowsNumber = self.wndMain:FindChild("TABLE_rating"):GetRowCount()
+	local tableWidth = self.wndMain:GetWidth() - 50
+	local tableHeight = rowsNumber*25 + 30
+
+	self.wndMain:FindChild("TABLE_rating"):SetColumnWidth(1, tableWidth*0.6)
+	self.wndMain:FindChild("TABLE_rating"):SetColumnWidth(2, tableWidth*0.2)
+	self.wndMain:FindChild("TABLE_rating"):SetColumnWidth(3, tableWidth*0.2)
+    self.wndMain:FindChild("TABLE_rating"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
+end
+
+function RIPgold:OnBTN_ratingsClick()
+	self.wndMain:FindChild("WIN_stats"):Show(false)
+	self.wndMain:FindChild("WIN_ratings"):Show(true)
+	self.wndMain:FindChild("WIN_custom"):Show(false)
+	self.wndMain:FindChild("WIN_settings"):Show(false)
+
+	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("99000000")
+	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("ef000000")
+	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
+	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
+
+	
+	self.wndMain:FindChild("TABLE_rating"):DeleteAll()
+    for index,data in pairs(self.rat) do
+    	--rowsNumber = rowsNumber + 1
+		local tRow = self.wndMain:FindChild("TABLE_rating"):AddRow("")
+	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 1, index)
+	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 2, data["rating"])
+	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 3, data["dungs"])
+	    
+    end
+
+	SendVarToRover("table_rating",self.wndMain:FindChild("TABLE_rating"))
+
+	SendVarToRover("self",self)
+
+	RIPgold:OnSizeChange_rating(self)
+
+	self.wndMain:FindChild("WIN_ratings"):ArrangeChildrenVert(0)
+
 end
 
 function RIPgold:OnBTN_customClick()
 	self.wndMain:FindChild("WIN_stats"):Show(false)
+	self.wndMain:FindChild("WIN_ratings"):Show(false)
 	self.wndMain:FindChild("WIN_custom"):Show(true)
 	self.wndMain:FindChild("WIN_settings"):Show(false)
 
 	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("99000000")
+	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("ef000000")
 	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
 
-	self.wndMain:FindChild("WIN_custom"):ArrangeChildrenVert(1)
-	self.wndMain:FindChild("WRAP_ALL"):ArrangeChildrenVert(1)
-	self.wndMain:FindChild("WRAP_STL"):ArrangeChildrenVert(1)
-	self.wndMain:FindChild("WRAP_KV"):ArrangeChildrenVert(1)
-	self.wndMain:FindChild("WRAP_SC"):ArrangeChildrenVert(1)
-	self.wndMain:FindChild("WRAP_SSM"):ArrangeChildrenVert(1)
+	self.wndMain:FindChild("WIN_custom"):ArrangeChildrenVert(0)
+	self.wndMain:FindChild("WRAP_ALL"):ArrangeChildrenVert(0)
+	self.wndMain:FindChild("WRAP_STL"):ArrangeChildrenVert(0)
+	self.wndMain:FindChild("WRAP_KV"):ArrangeChildrenVert(0)
+	self.wndMain:FindChild("WRAP_SC"):ArrangeChildrenVert(0)
+	self.wndMain:FindChild("WRAP_SSM"):ArrangeChildrenVert(0)
 end
 
 function RIPgold:OnBTN_settingsClick()
 	self.wndMain:FindChild("WIN_stats"):Show(false)
+	self.wndMain:FindChild("WIN_ratings"):Show(false)
 	self.wndMain:FindChild("WIN_custom"):Show(false)
 	self.wndMain:FindChild("WIN_settings"):Show(true)
 
 	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("99000000")
+	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("ef000000")
 
@@ -746,6 +925,51 @@ end
 function RIPgold:OnBTN_SET_SoundClick(wndControl)
 	self.set.sound = wndControl:IsChecked()
 	self:PlaySound(self.set.soundType)
+end
+
+-----------------------------------------------------------------------------------------------
+-- Save and Restore Data
+-----------------------------------------------------------------------------------------------
+function RIPgold:OnSave(eLevel)
+	local tData = {}
+	-- This example uses account level saves.
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+	-- Set your variables into tData
+		tData.hlp = {}
+		for name,data in pairs(self.hlp) do
+			tData.hlp[name] = data
+		end
+		tData.set = {}
+		for name,data in pairs(self.set) do
+			tData.set[name] = data
+		end
+		tData.rat = {}
+		for name,data in pairs(self.rat) do
+			tData.rat[name] = data
+		end
+		--Sound.Play(Sound.PlayUIQueuePopsAdventure) testing purposes
+	end
+	
+	return tData
+end
+
+function RIPgold:OnRestore(eLevel, tData)
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
+		-- Set your reference for the saved variables
+		-- This example simply sets a table to mimic the loaded data. You can change this to split data up as you like.
+		
+		for name,data in pairs(tData.hlp) do
+			self.hlp[name] = data
+		end
+		for name,data in pairs(tData.set) do
+			self.set[name] = data
+		end
+		for name,data in pairs(tData.rat) do
+			self.rat[name] = data
+		end
+
+		self.tSavedVariables = tData
+	end
 end
 
 -----------------------------------------------------------------------------------------------

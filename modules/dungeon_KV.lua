@@ -27,7 +27,7 @@ function KV:OnCombat_OUT(self, unitInCombat)
 
 	if unitInCombat:GetName() == "Forgemaster Trogun" then
 		if self.hlp.TrogunStacks > 0 then
-			local sToChat = string.format("Forgemaster got %s stacks of Primal Rage. The challenge is lost.", self.hlp.TrogunStacks)
+			local sToChat = string.format("Forgemaster got stacks of Primal Fire. The challenge is lost.", self.hlp.TrogunStacks)
 			self:AddFails()
 			self:InformOthers(sToChat, true, false)
 		end
@@ -35,22 +35,6 @@ function KV:OnCombat_OUT(self, unitInCombat)
 end
 
 function KV:OnCombatLogVitalModifier(self, tEventArgs)
-
-	if self.hlp.boss["Forgemaster Trogun"] then  
-
-		function IsForgemasterBuffed()
-		   local BossBuffs = tEventArgs.unitCaster:GetBuffs().arBeneficial[1].strTooltip ~= nil
-		end
-
-		if pcall(IsForgemasterBuffed) then
-
-			local getBossBuffs = tEventArgs.unitCaster:GetBuffs()
-
-			if getBossBuffs.arBeneficial[1].strTooltip == "Primal Rage" then
-				self.hlp.TrogunStacks = getBossBuffs.arBeneficial[1].nCount
-			end
-		end
-	end
 end
 
 function KV:OnCombatLogDamage(self, tEventArgs)
@@ -85,6 +69,40 @@ function KV:OnCombatLogDamage(self, tEventArgs)
 		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+	end
+
+	if getTarget == "Forgemaster Trogun" then
+
+		function IsForgemasterBuffed()
+		   local BossBuffs = tEventArgs.unitTarget:GetBuffs().arBeneficial[1].splEffect:GetName() ~= nil
+		end
+
+		if pcall(IsForgemasterBuffed) then
+			local getBossBuffs = tEventArgs.unitTarget:GetBuffs()
+
+			--if getBossBuffs.arBeneficial[1].strTooltip == "Primal Rage" then
+			if getBossBuffs.arBeneficial[1].splEffect:GetName() == "Essence of Primal Fire" then
+				self.hlp.TrogunStacks = getBossBuffs.arBeneficial[1].nCount
+				self:Debug("Trogun have stacks: " .. self.hlp.TrogunStacks)
+			end
+		end
+	end
+
+	if getCaster == "Forgemaster Trogun" then
+
+		function IsForgemasterBuffed()
+		   local BossBuffs = tEventArgs.unitCaster:GetBuffs().arBeneficial[1].splEffect:GetName() ~= nil
+		end
+
+		if pcall(IsForgemasterBuffed) then
+			local getBossBuffs = tEventArgs.unitCaster:GetBuffs()
+
+			--if getBossBuffs.arBeneficial[1].strTooltip == "Primal Rage" then
+			if getBossBuffs.arBeneficial[1].splEffect:GetName() == "Essence of Primal Fire" then
+				self.hlp.TrogunStacks = getBossBuffs.arBeneficial[1].nCount
+				self:Debug("Trogun have stacks: " .. self.hlp.TrogunStacks)
+			end
+		end
 	end
 
 end

@@ -25,6 +25,13 @@ local STL = Apollo.GetPackage("Module:STL-1.0").tPackage
 local KV = Apollo.GetPackage("Module:KV-1.0").tPackage
 local SSM = Apollo.GetPackage("Module:SSM-1.0").tPackage
 local SC = Apollo.GetPackage("Module:SC-1.0").tPackage
+
+-- modules for UI
+local UIn = Apollo.GetPackage("Module:UIn-1.0").tPackage
+local UIr = Apollo.GetPackage("Module:UIr-1.0").tPackage
+local UIc = Apollo.GetPackage("Module:UIc-1.0").tPackage
+local UIs = Apollo.GetPackage("Module:UIs-1.0").tPackage
+
  
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -90,9 +97,6 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterEventHandler("ToggleRIPgoldUI", "OnRIPgoldOn", self)
 
 		Apollo.RegisterSlashCommand("rip", "OnRIPgoldOn", self)
-		Apollo.RegisterSlashCommand("rap", "HowManyFails", self)
-
-		Apollo.RegisterEventHandler("WindowMove", "OnWindowSizeChanged", self)
 
 		-- Do additional Addon initialization here
 		Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
@@ -113,7 +117,7 @@ function RIPgold:OnDocLoaded()
 		self.checkDeadState:Stop()
 
 		-- updating ui every second when opened
-		self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
+		self.updateStatsUI = ApolloTimer.Create(1, true, "UIn:UpdateRIPgoldStats(self)", self)
 		self.updateStatsUI:Stop()
 
 		self.hlp.isBossDead = {
@@ -474,7 +478,7 @@ function RIPgold:AddFails()
 end
 
 -----------------------------------------------------------------------------------------------
--- RIPgoldForm Functions
+-- UI Functions (RIPgoldForm Functions)
 -----------------------------------------------------------------------------------------------
 
 -- icon for interface menu
@@ -487,7 +491,7 @@ function RIPgold:OnRIPgoldOn()
 
 	self.updateStatsUI:Start()
 
-	self:UpdateRIPgoldStatsUI()
+	UIn:UpdateRIPgoldStats(self)
 	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(0)
 
 	self.wndMain:Invoke() -- show the window
@@ -503,12 +507,6 @@ function RIPgold:OnRIPgoldOn()
 	--self:Debug(self.hlp.player[3].name .. ": " .. self.hlp.player[3].fails)
 	--self:Debug(self.hlp.player[4].name .. ": " .. self.hlp.player[4].fails)
 	--self:Debug(self.hlp.player[5].name .. ": " .. self.hlp.player[5].fails)
-
-end
-
--- when the OK button is clicked
-function RIPgold:OnOK() -- not being used, all things save real time
-	self.wndMain:Close() -- hide the window
 end
 
 -- when the Cancel button is clicked
@@ -517,405 +515,61 @@ function RIPgold:OnCancel()
 	self.updateStatsUI:Stop()
 end
 
-function RIPgold:UI_show_findPlayers(showOrNot)
-	self.wndMain:FindChild("INFO_findPlayers"):Show(showOrNot)
-	self.wndMain:FindChild("WRAP_findPlayers_announce"):Show(showOrNot)
-	self.wndMain:FindChild("WRAP_findPlayers_settings"):Show(showOrNot)
-end
-
-function RIPgold:UpdateRIPgoldStatsUI()
-	self.wndMain:FindChild("TABLE_stats"):DeleteAll()
-
-	if self.hlp.isInDungeon then
-		self:UI_show_findPlayers(false)
-	else
-		local memberCount = GroupLib.GetMemberCount()
-		if memberCount == 0 then
-			self.hlp.lastMemberCount = 0
-		elseif memberCount < 5 then
-			--if self.hlp.lastMemberCount < memberCount then
-				ALL:PreparePlayers(self)
-				self:UpdateAnnounceUI()
-				self:UI_show_findPlayers(true)
-				--self.hlp.lastMemberCount = memberCount
-			--end
-			self.hlp.lastMemberCount = memberCount
-		elseif memberCount == 5 then
-			if self.hlp.lastMemberCount ~= memberCount then
-				ALL:PreparePlayers(self)
-				self:UpdateAnnounceUI()
-				self:UI_show_findPlayers(true)
-				--self.hlp.lastMemberCount = memberCount
-			else
-				self:UpdateAnnounceUI()
-				self:UI_show_findPlayers(false)
-			end
-			self.hlp.lastMemberCount = memberCount
-		else
-			self:UI_show_findPlayers(false)
-			self.hlp.lastMemberCount = 5
-		end
-	end
-
-	local rowsNumber = 0
-	for i=1,5 do
-		if self.hlp.player == nil then
-			ALL:PreparePlayers(self)
-		else
-			if self.hlp.player[i].name ~= "" then
-
-				rowsNumber = rowsNumber + 1
-				local tRow = self.wndMain:FindChild("TABLE_stats"):AddRow("")
-		    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 1, self.hlp.player[i].name)
-
-		    	function GetRating()
-			   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
-				end
-
-				if pcall(GetRating) then
-					local rating = self.rat[self.hlp.player[i].name]["rating"] / 100
-					local rating = string.format("%2.0f", self.rat[self.hlp.player[i].name]["rating"] / 100)
-
-					self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2,  rating)
-				else
-					self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
-				end
-
-		    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
-			end
-		end
-	end
-
-	local tableWidth = self.wndMain:GetWidth() - 70
-	local tableHeight = rowsNumber*25 + 30
-    self.wndMain:FindChild("TABLE_stats"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
-
-	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
-
-end
-
-function RIPgold:UpdateAnnounceUI()
-	if self.set.CHCK_PLZ_dps == true then
-		self.wndMain:FindChild("CHCK_PLZ_dps"):SetCheck(self.set.CHCK_PLZ_dps)
-	else
-		--self.wndMain:FindChild("CHCK_PLZ_dps"):SetCheck(false)
-	end
-
-	if self.set.CHCK_PLZ_heal == true then
-		self.wndMain:FindChild("CHCK_PLZ_heal"):SetCheck(self.set.CHCK_PLZ_heal)
-	else
-		--self.wndMain:FindChild("CHCK_PLZ_heal"):SetCheck(false)
-	end
-
-	if self.set.CHCK_PLZ_tank == true then
-		self.wndMain:FindChild("CHCK_PLZ_tank"):SetCheck(self.set.CHCK_PLZ_tank)
-	else
-		--self.wndMain:FindChild("CHCK_PLZ_tank"):SetCheck(false)
-	end
-
-	self.set.CHCK_PLZ_dps = self.wndMain:FindChild("CHCK_PLZ_dps"):IsChecked()
-	self.set.CHCK_PLZ_heal = self.wndMain:FindChild("CHCK_PLZ_heal"):IsChecked()
-	self.set.CHCK_PLZ_tank = self.wndMain:FindChild("CHCK_PLZ_tank"):IsChecked()
-
-
-
-	local announcingText = "/n " --longest: /n LFxM for vets, 10k+ dps or 6k+ heal or tanking class
-
-	local memberCount = GroupLib.GetMemberCount()
-	local missingMembers = 0
-
-	if memberCount == 0 then
-		missingMembers = ""
-		announcingText = self:UpdateAnnounceTextBase(announcingText,missingMembers)
-
-	elseif memberCount < 5 then
-		missingMembers = 5 - memberCount
-		announcingText = self:UpdateAnnounceTextBase(announcingText,missingMembers)
-
-	else
-		announcingText = announcingText .. "full"
-	end
-
-	self.wndMain:FindChild("BOX_announce"):SetText(announcingText)
-end
-
-function RIPgold:UpdateAnnounceTextBase(announcingText, missingMembers)
-
-	announcingText = announcingText .. "LF"..missingMembers.."M for vets"
-
-	if self.set.COMB_roleIndex == 1 then
-		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "RR"  -- example: 10RR
-	elseif self.set.COMB_roleIndex == 3 then
-		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "+ ilvl" -- example: 100+ ilvl
-	end
-
-	if self.set.CHCK_PLZ_dps == true or self.set.CHCK_PLZ_heal == true or self.set.CHCK_PLZ_tank == true then
-		announcingText = announcingText .. ", "
-	end
-
-	if self.set.CHCK_PLZ_dps == true then
-		if self.set.COMB_roleIndex == 2 then
-			announcingText = announcingText .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "k+ " -- example: 10k+ 
-		end
-		announcingText = announcingText .. "dps"
-	end
-
-	if self.set.CHCK_PLZ_dps == true and self.set.CHCK_PLZ_heal == true then
-		announcingText = announcingText .. " or "
-	end
-
-	if self.set.CHCK_PLZ_dps == true and self.set.CHCK_PLZ_tank == true then
-		if self.set.CHCK_PLZ_heal == false then
-			announcingText = announcingText .. " or "
-		end
-	end
-
-	if self.set.CHCK_PLZ_heal == true then
-		if self.set.COMB_roleIndex == 2 then
-			announcingText = announcingText .. "6k+ "
-		end
-		announcingText = announcingText .. "heal"
-	end
-
-	if self.set.CHCK_PLZ_heal == true and self.set.CHCK_PLZ_tank == true then
-		announcingText = announcingText .. " or "
-	end
-
-	if self.set.CHCK_PLZ_tank == true then
-		announcingText = announcingText .. "tanking class"
-	end
-
-	return announcingText
-end
-
--- when top buttons (cards) are clicked
+-- card menu, top menu buttons click
 function RIPgold:OnBTN_statsClick()
-	self.wndMain:FindChild("WIN_stats"):Show(true)
-	self.wndMain:FindChild("WIN_ratings"):Show(false)
-	self.wndMain:FindChild("WIN_custom"):Show(false)
-	self.wndMain:FindChild("WIN_settings"):Show(false)
-
-	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("ef000000")
-	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
-
-	if self.hlp.isInDungeon then
-		self.wndMain:FindChild("INFO_stats"):SetText("Current dungeon")
-	else
-		self.wndMain:FindChild("INFO_stats"):SetText("Last dungeon")
-	end
-
-	self.wndMain:FindChild("TABLE_stats"):DeleteAll()
-	local rowsNumber = 0
-	for i=1,5 do
-		if self.hlp.player[i].name ~= "" then
-			rowsNumber = rowsNumber + 1
-			local tRow = self.wndMain:FindChild("TABLE_stats"):AddRow("")
-	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 1, self.hlp.player[i].name)
-
-	    	function GetRating()
-		   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
-			end
-
-			if pcall(GetRating) then
-				local rating = self.rat[self.hlp.player[i].name]["rating"] / 100
-				local rating = string.format("%2.0f", self.rat[self.hlp.player[i].name]["rating"] / 100)
-
-				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2,  rating)
-			else
-				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
-			end
-	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
-		end
-	end
-
-	local tableWidth = self.wndMain:GetWidth() - 50
-	local tableHeight = rowsNumber*25 + 30
-    self.wndMain:FindChild("TABLE_stats"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
-
-	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
-
-	--- announcing to nexus
-	self.wndMain:FindChild("COMB_role"):DeleteAll()
-	self.wndMain:FindChild("COMB_role"):AddItem("anyone", "test", nil)
-	self.wndMain:FindChild("COMB_role"):AddItem("rating", "test", nil)
-	self.wndMain:FindChild("COMB_role"):AddItem("k+ dps", "test", nil)
-	self.wndMain:FindChild("COMB_role"):AddItem("ilvl", "test", nil)
-
-	if not self.set.COMB_roleIndex then
-		-- set original values
-		self.wndMain:FindChild("COMB_role"):SelectItemByIndex(0) -- original pick: anyone
-		self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(false)
-		self.set.BOX_announce = { 
-			[1] = "10", [2] = "10", [3] = "100",
-		}
-
-	else
-		self.wndMain:FindChild("COMB_role"):SelectItemByIndex(self.set.COMB_roleIndex)
-
-		if self.set.COMB_roleIndex == 0 then
-			self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(false)
-		else
-			local BOX_announce_value = self.set.BOX_announce[self.set.COMB_roleIndex]
-			self.wndMain:FindChild("BOX_BG_targetPerformance"):FindChild("BOX_announce"):SetText(BOX_announce_value)
-
-			self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(true)
-		end
-	end
-
-	self.wndMain:FindChild("WRAP_findPlayers_checkboxes"):ArrangeChildrenHorz(0)
-
-	self:UpdateAnnounceUI()
-
-	-- workaround for a wildstar bug with not opening combat boxes, continues with :onCOMB_roleOutsideClick()
-	self.wndMain:FindChild("COMB_role"):GetChildren()[1]:Show(false)
-
-	-- workaround for making arrow near COMB_role less visible (not possible via Houston)
-	self.wndMain:FindChild("COMB_role"):GetChildren()[2]:SetBGColor("99ffffff")
-
-	--self:Debug("GetMemberCount ".. GroupLib.GetMemberCount())
-
-end
-
-function RIPgold:onBOX_announceChange(e)
-	self.set.BOX_announce[self.set.COMB_roleIndex] = e:GetText()
-	self:UpdateAnnounceUI()
-end
-
-function RIPgold:onCOMB_roleOutsideClick()
-	self.wndMain:FindChild("COMB_role"):GetChildren()[1]:Show(false)
-end
-
-function RIPgold:onCOMB_roleClick()
-	local getIndex = self.wndMain:FindChild("COMB_role"):GetSelectedIndex()
-	self.set.COMB_roleIndex = getIndex
-
-	if self.set.COMB_roleIndex == 0 then
-		self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(false)
-	else
-
-		local BOX_announce_value = self.set.BOX_announce[self.set.COMB_roleIndex]
-		self.wndMain:FindChild("BOX_BG_targetPerformance"):FindChild("BOX_announce"):SetText(BOX_announce_value)
-
-		self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(true)
-	end
-
-	self:UpdateAnnounceUI()
-end
-
-function RIPgold:onBTN_announceClick()
-	local announce = self.wndMain:FindChild("BOX_announce"):GetText()
-	ChatSystemLib.Command(announce)
-
-	-- set open group
-	GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
-
-	-- set open referrals
-	GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)
-end
-
-function RIPgold:CHCK_PLZ_dpsClick()
-	self.set.CHCK_PLZ_dps = self.wndMain:FindChild("CHCK_PLZ_dps"):IsChecked()
-	self:UpdateAnnounceUI()
-end
-
-function RIPgold:CHCK_PLZ_healClick()
-	self.set.CHCK_PLZ_heal = self.wndMain:FindChild("CHCK_PLZ_heal"):IsChecked()
-	self:UpdateAnnounceUI()
-end
-
-function RIPgold:CHCK_PLZ_tankClick()
-	self.set.CHCK_PLZ_tank = self.wndMain:FindChild("CHCK_PLZ_tank"):IsChecked()
-	self:UpdateAnnounceUI()
-end
-
-function RIPgold:OnWindowSizeChanged()
-	self:Debug("window changed")
-	RIPgold:OnSizeChange_rating(self)
-end
-
-function RIPgold:OnSizeChange_rating(self)
-	local rowsNumber = self.wndMain:FindChild("TABLE_rating"):GetRowCount()
-	local tableWidth = self.wndMain:GetWidth() - 50
-	local tableHeight = rowsNumber*25 + 30
-
-	--self.wndMain:FindChild("TABLE_rating"):SetColumnWidth(1, tableWidth*0.6)
-	--self.wndMain:FindChild("TABLE_rating"):SetColumnWidth(2, tableWidth*0.2)
-	--self.wndMain:FindChild("TABLE_rating"):SetColumnWidth(3, tableWidth*0.2)
-    self.wndMain:FindChild("TABLE_rating"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
+	UIn:OnBTN_statsClick(self)
 end
 
 function RIPgold:OnBTN_ratingsClick()
-	self.wndMain:FindChild("WIN_stats"):Show(false)
-	self.wndMain:FindChild("WIN_ratings"):Show(true)
-	self.wndMain:FindChild("WIN_custom"):Show(false)
-	self.wndMain:FindChild("WIN_settings"):Show(false)
-
-	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("ef000000")
-	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
-
-	
-	self.wndMain:FindChild("TABLE_rating"):DeleteAll()
-    for index,data in pairs(self.rat) do
-    	--rowsNumber = rowsNumber + 1
-		local tRow = self.wndMain:FindChild("TABLE_rating"):AddRow("")
-	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 1, index)
-
-	    local rating = string.format("%2.0f", data["rating"] / 100)
-	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 2, rating)
-	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 3, data["dungs"])
-	    
-    end
-
-	SendVarToRover("table_rating",self.wndMain:FindChild("TABLE_rating"))
-
-	SendVarToRover("self",self)
-
-	RIPgold:OnSizeChange_rating(self)
-
-	self.wndMain:FindChild("WIN_ratings"):ArrangeChildrenVert(0)
-
+	UIr:OnBTN_ratingsClick(self)
 end
 
 function RIPgold:OnBTN_customClick()
-	self.wndMain:FindChild("WIN_stats"):Show(false)
-	self.wndMain:FindChild("WIN_ratings"):Show(false)
-	self.wndMain:FindChild("WIN_custom"):Show(true)
-	self.wndMain:FindChild("WIN_settings"):Show(false)
-
-	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("ef000000")
-	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
-
-	self.wndMain:FindChild("WIN_custom"):ArrangeChildrenVert(0)
-	self.wndMain:FindChild("WRAP_ALL"):ArrangeChildrenVert(0)
-	self.wndMain:FindChild("WRAP_STL"):ArrangeChildrenVert(0)
-	self.wndMain:FindChild("WRAP_KV"):ArrangeChildrenVert(0)
-	self.wndMain:FindChild("WRAP_SC"):ArrangeChildrenVert(0)
-	self.wndMain:FindChild("WRAP_SSM"):ArrangeChildrenVert(0)
+	UIc:OnBTN_customClick(self)
 end
 
 function RIPgold:OnBTN_settingsClick()
-	self.wndMain:FindChild("WIN_stats"):Show(false)
-	self.wndMain:FindChild("WIN_ratings"):Show(false)
-	self.wndMain:FindChild("WIN_custom"):Show(false)
-	self.wndMain:FindChild("WIN_settings"):Show(true)
-
-	self.wndMain:FindChild("TOP_BG_stats"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
-	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("ef000000")
-
-	self.wndMain:FindChild("SET_sound"):SetCheck(self.set.sound)
+	UIs:OnBTN_settingsClick(self)
 end
 
+-- ## card: settings
 function RIPgold:OnBTN_SET_SoundClick(wndControl)
-	self.set.sound = wndControl:IsChecked()
-	self:PlaySound(self.set.soundType)
+	UIs:OnBTN_SET_SoundClick(self, wndControl)
+end
+
+-- ## card: my group (old statistics)
+
+-- function RIPgold:UpdateRIPgoldStatsUI() -- not being used
+-- 	UIn:UpdateRIPgoldStats(self)
+-- end
+
+-- function RIPgold:UpdateAnnounceUI() -- not being used
+-- 	UIn:UpdateAnnounceUI(self)
+-- end
+
+function RIPgold:onBOX_announceChange(wndControl)
+	UIn:onBOX_announceChange(self, wndControl)
+end
+
+function RIPgold:onCOMB_roleClick()
+	UIn:onCOMB_roleClick(self)
+end
+
+function RIPgold:onBTN_announceClick()
+	UIn:onBTN_announceClick(self)
+end
+
+-- checkboxes
+function RIPgold:CHCK_PLZ_dpsClick()
+	UIn:CHCK_PLZ_dpsClick(self)
+end
+
+function RIPgold:CHCK_PLZ_healClick()
+	UIn:CHCK_PLZ_healClick(self)
+end
+
+function RIPgold:CHCK_PLZ_tankClick()
+	UIn:CHCK_PLZ_tankClick(self)
 end
 
 -----------------------------------------------------------------------------------------------

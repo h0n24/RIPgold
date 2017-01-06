@@ -86,12 +86,23 @@ function SC:OnCombatLogDamage(self, tEventArgs)
 	if getTarget == "Bosun Octog" then
 
 		function IsBosunBroken()
+<<<<<<< HEAD
 		   local getBossBuffs = tEventArgs.unitCaster:GetBuffs().arHarmful[1].splEffect:GetName() ~= nil
 		end
 
 		if pcall(IsBosunBroken) then
 			if tEventArgs.unitTarget:GetBuffs().arHarmful[1].splEffect:GetName() == "Broken Armor" then
 				self.hlp.OctogStacks = getBossBuffs.arHarmful[1].nCount
+=======
+		   local getBossBuffs = tEventArgs.unitCaster:GetBuffs().arHarmful[1].strTooltip ~= nil
+		end
+
+		if pcall(IsBosunBroken) then
+			local getBossBuffs = tEventArgs.unitTarget:GetBuffs()
+
+			if getBossBuffs.arBeneficial[1].splEffect:GetName() == "Broken Armor" then
+				self.hlp.OctogStacks = getBossBuffs.arBeneficial[1].nCount
+>>>>>>> origin/master
 				self:Debug("Octog have stacks: " .. self.hlp.OctogStacks)
 			end
 		end
@@ -100,12 +111,23 @@ function SC:OnCombatLogDamage(self, tEventArgs)
 	if getCaster == "Bosun Octog" then
 
 		function IsBosunBroken()
+<<<<<<< HEAD
 		   local getBossBuffs = tEventArgs.unitCaster:GetBuffs().arHarmful[1].splEffect:GetName() ~= nil
 		end
 
 		if pcall(IsBosunBroken) then
 			if tEventArgs.unitCaster:GetBuffs().arHarmful[1].splEffect:GetName() == "Broken Armor" then
 				self.hlp.OctogStacks = getBossBuffs.arHarmful[1].nCount
+=======
+		   local getBossBuffs = tEventArgs.unitCaster:GetBuffs().arHarmful[1].strTooltip ~= nil
+		end
+
+		if pcall(IsBosunBroken) then
+			local getBossBuffs = tEventArgs.unitCaster:GetBuffs()
+
+			if getBossBuffs.arBeneficial[1].splEffect:GetName() == "Broken Armor" then
+				self.hlp.OctogStacks = getBossBuffs.arBeneficial[1].nCount
+>>>>>>> origin/master
 				self:Debug("Octog have stacks: " .. self.hlp.OctogStacks)
 			end
 		end

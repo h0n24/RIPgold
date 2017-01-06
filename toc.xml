@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Addon Author="Aki" APIVersion="14" Name="RIPgold" Description="Informs group when someone fails gold challenge in veteran dungeons">
+<<<<<<< HEAD
     <Script Name="modules\dungeon_STL.lua"/>
     <Script Name="modules\dungeon_KV.lua"/>
     <Script Name="modules\dungeon_SSM.lua"/>
     <Script Name="modules\dungeon_SC.lua"/>
+=======
+	<Script Name="modules\dungeon_STL.lua"/>
+	<Script Name="modules\dungeon_KV.lua"/>
+	<Script Name="modules\dungeon_SSM.lua"/>
+	<Script Name="modules\dungeon_SC.lua"/>
+>>>>>>> origin/master
     <Script Name="RIPgold.lua"/>
     <Form Name="RIPgold.xml"/>
 </Addon>

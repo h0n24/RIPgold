@@ -46,6 +46,7 @@ end
 function STL:OnUnitCreatedBeforeEnteringDungeon(self, unit)
 	-- Warning! Checking for "Thundercall Channeler unit has to be before checking for dungeons because it happens before entring the dungeon in function OnPublicEventStatsUpdate()
 
+<<<<<<< HEAD
 	-- has to be outside InitializeVars() becouse it would get reseted after game creates Channelers
 	if self.hlp.WindInvokerChanellerID == nil then
 		self.hlp.WindInvokerChanellerID = { 
@@ -53,6 +54,8 @@ function STL:OnUnitCreatedBeforeEnteringDungeon(self, unit)
 		}
 	end
 
+=======
+>>>>>>> origin/master
 	if unit:GetName() == "Thundercall Channeler" then
 		STL:getChannelerID(self, unit)
 	end
@@ -100,9 +103,13 @@ function STL:getChannelerID(self, unit)
 			local doesHaveName = GameLib.GetUnitById(testedID):GetName()
 			if doesHaveName == "Thundercall Channeler" then
 				local numberID = math.abs(numberPosition) + 1
+<<<<<<< HEAD
 				SendVarToRover("self.hlp.WindInvokerChanellerID",self.hlp.WindInvokerChanellerID)
 				self.hlp.WindInvokerChanellerID[numberID] = testedID
 				self:Debug("Channeler ID: "..testedID)
+=======
+				self.hlp.WindInvokerChanellerID[numberID] = testedID
+>>>>>>> origin/master
 			end
 		end
 	end
@@ -219,6 +226,7 @@ function STL:getCircleDistances(self, unit)
 			if shortestDistance > channelerRadius then
 				local missedDistance = shortestDistance - channelerRadius
 				missedDistance = Apollo.FormatNumber(missedDistance, 2, true)
+<<<<<<< HEAD
 
 				if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor
 					local sToChat = string.format("%s missed placing AOE by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
@@ -226,6 +234,12 @@ function STL:getCircleDistances(self, unit)
 					self:InformOthers(sToChat, true, false)
 					self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
 				end
+=======
+				local sToChat = string.format("%s missed placing AOE by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
+				self:Debug(sToChat)
+				self:InformOthers(sToChat, true, false)
+				self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
+>>>>>>> origin/master
 			end
 		end
 		self.hlp.WindInvokerLastGametime = actualGametime

@@ -111,7 +111,6 @@ function RIPgold:OnDocLoaded()
 		self.checkDeadState = ApolloTimer.Create(1, true, "CheckForPlayerDeaths", self) 
 		self.checkDeadState:Stop()
 
-
 		-- updating ui every second when opened
 		self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
 		self.updateStatsUI:Stop()
@@ -434,8 +433,6 @@ function RIPgold:OnPublicEventStart()
 			end
 		end
 	end
-
-	return false
 end
 
 function RIPgold:OnPublicEventStatsUpdate(peUpdated)
@@ -963,7 +960,6 @@ function RIPgold:OnBTN_statsClick()
 			else
 				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
 			end
-
 	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
 		end
 	end
@@ -1001,6 +997,7 @@ function RIPgold:OnBTN_statsClick()
 			self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(true)
 		end
 	end
+end
 
 	self.wndMain:FindChild("WRAP_findPlayers_checkboxes"):ArrangeChildrenHorz(0)
 
@@ -1101,6 +1098,7 @@ function RIPgold:OnBTN_ratingsClick()
     	--rowsNumber = rowsNumber + 1
 		local tRow = self.wndMain:FindChild("TABLE_rating"):AddRow("")
 	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 1, index)
+
 	    local rating = string.format("%2.0f", data["rating"] / 100)
 	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 2, rating)
 	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 3, data["dungs"])

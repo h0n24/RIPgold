@@ -43,7 +43,7 @@ function RIPgold:new(o)
     self.tSavedVariables = {}
 	self.hlp = {} -- all helpers
 	self.set = {} -- all settings
-	self.rat = {}
+	self.rat = {} -- all ratings
 
     return o
 end
@@ -109,19 +109,22 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterEventHandler("ChangeWorld", "OnWorldChange", self)
 
 		-- first: seconds how often is repeated, second if its repeating
-		self.checkDeadState = ApolloTimer.Create(1, true, "CheckForPlayerDeaths", self) 
+		self.checkDeadState = ApolloTimer.Create(1, true, "ALL:CheckForPlayerDeaths(self)", self) 
 		self.checkDeadState:Stop()
 
 		-- updating ui every second when opened
 		self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
 		self.updateStatsUI:Stop()
 
-		self.hlp.isBossDead = {}
-		self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "ALL_checkForBossDeaths", self)
+		self.hlp.isBossDead = {
+			["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = ApolloTimer.Create(1, true, "ALL:checkForBossDeaths(self)", self)
+		}
+		--self.hlp.isBossDead = {}
+		--self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "ALL:checkForBossDeaths(self)", self)
 		self.hlp.isBossDead.timer:Stop()
-		self.hlp.isBossDead.ID = 0
-		self.hlp.isBossDead.name = ""
-		self.hlp.isBossDead.dead = false
+		--self.hlp.isBossDead.ID = 0
+		--self.hlp.isBossDead.name = ""
+		--self.hlp.isBossDead.dead = false
 
 		self.hlp.doesChannelerExists = ApolloTimer.Create(1, true, "STL:checkForChannelerDeaths(self)", self)
 		self.hlp.doesChannelerExists:Stop()
@@ -131,10 +134,10 @@ function RIPgold:OnDocLoaded()
 			self.hlp.peMatch = nil
 			self.hlp.isInDungeon = false
 
-			self:InitializeVars()
+			ALL:InitializeVars(self)
 
 			if not GroupLib.InRaid() then
-				self:PreparePlayers()
+				ALL:PreparePlayers(self)
 			end
 
 			self.set.sound = true
@@ -160,20 +163,14 @@ function RIPgold:OnDocLoaded()
 end
 
 -----------------------------------------------------------------------------------------------
--- RIPgold Functions
+-- Trivial Functions
 -----------------------------------------------------------------------------------------------
--- Define general functions here
 
--- icon for interface menu
-function RIPgold:OnInterfaceMenuListHasLoaded()
-	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "RIPgold", {"ToggleRIPgoldUI", "", ""}) --IconSprites:Icon_Windows_UI_CRB_Rival icon before (terrible meh)
-end
-
-function RIPgold:addToSet(set, key) -- not using, future reference
+function RIPgold:addToSet(set, key) -- not being used, future reference
     set[key] = true
 end
 
-function RIPgold:removeFromSet(set, key) -- not using, future reference
+function RIPgold:removeFromSet(set, key) -- not being used, future reference
     set[key] = nil
 end
 
@@ -181,218 +178,20 @@ function RIPgold:setContains(set, key)
     return set[key] ~= nil
 end
 
--- on SlashCommand "/rip"
-function RIPgold:OnRIPgoldOn()
-
-	self.updateStatsUI:Start()
-
-	self:UpdateRIPgoldStatsUI()
-	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(0)
-
-	self.wndMain:Invoke() -- show the window
-
-	SendVarToRover("self.tSavedVariables",self.tSavedVariables)
-
-	--SendVarToRover("self.rat",self.tSavedVariables)
-
-	--table.insert("test", self.rat)	
-
-	--self:Debug(self.hlp.player[1].name .. ": " .. self.hlp.player[1].fails)
-	--self:Debug(self.hlp.player[2].name .. ": " .. self.hlp.player[2].fails)
-	--self:Debug(self.hlp.player[3].name .. ": " .. self.hlp.player[3].fails)
-	--self:Debug(self.hlp.player[4].name .. ": " .. self.hlp.player[4].fails)
-	--self:Debug(self.hlp.player[5].name .. ": " .. self.hlp.player[5].fails)
-
-end
-
-function RIPgold:HowManyFails()
-
-	self:InformOthers("So, how many fails did you do this dungeon?", false)
-
-	for i=1,5 do
-		if self.hlp.player[i].name ~= "" then
-			self:InformOthers(self.hlp.player[i].name .. ": " .. self.hlp.player[i].fails, false)
-		end
-	end
-
-	-- new function new rat
-	for i=1,5 do
-		if self.hlp.player[i].name ~= "" then
-
-			-- human readable fails
-			local failWord = "fails"
-			if self.hlp.player[i].fails == 1 then
-				failWord = "fail"
-			end
-
-			-- supernew function
-			--if self.rat ~= nil then
-			if RIPgold:setContains(self.rat, self.hlp.player[i].name) then
-				
-				local rating = self.rat[self.hlp.player[i].name]["rating"]
-				if self.hlp.player[i].fails > 0 then
-					rating = rating - self.hlp.player[i].fails
-				else
-					rating = rating + 50
-				end
-
-				self.rat[self.hlp.player[i].name]["fails"] = self.rat[self.hlp.player[i].name]["fails"] + self.hlp.player[i].fails
-				self.rat[self.hlp.player[i].name]["rating"] = rating
-				self.rat[self.hlp.player[i].name]["dungs"] = self.rat[self.hlp.player[i].name]["dungs"] + 1
-			else
-
-				local rating = 1000
-				if self.hlp.player[i].fails > 0 then
-					rating = rating - self.hlp.player[i].fails
-				else
-					rating = rating + 50
-				end
-
-				self.rat[self.hlp.player[i].name] = {}
-				self.rat[self.hlp.player[i].name]["fails"] = self.hlp.player[i].fails
-				self.rat[self.hlp.player[i].name]["rating"] = rating
-				self.rat[self.hlp.player[i].name]["dungs"] = 1
-			end
-			--end
-
-			sToChat = string.format("%s %s, %s rating", self.hlp.player[i].fails, failWord, self.rat[self.hlp.player[i].name]["rating"])
-			self:Debug(self.hlp.player[i].name .. ": ".. sToChat)
-		end
-	end
-
-	SendVarToRover("self.rat",self.rat)
-
-
-end
-
-function RIPgold:InitializeVars()
-
-	self.hlp.alreadyFailedChallenge = false
-	self.hlp.alreadyFailedDeathless = false
-
-	self.hlp.boss = {
-		["Grond the Corpsemaker"] = false,
-		["Slavemaster Drokk"] = false,
-		["Forgemaster Trogun"] = false,
-		["Stew-Shaman Tugga"] = false,
-		["Thunderfoot"] = false,
-		["Laveka the Dark-Hearted"] = false,
-		["Bosun Octog"] = false,
-		["Mordechai Redmoon"] = false,
-		["Blade-Wind the Invoker"] = false,	
-		["Aethros"] = false,		
-		["Stormtalon"] = false,	
-		["Deadringer Shallaos"] = false,
-		["Rayna Darkspeaker"] = false,
-		["Moldwood Overlord Skash"] = false,
-		["Ondu Lifeweaver"] = false,
-		["Spiritmother Selene the Corrupted"] = false,
-		["Invulnotron"] = false,
-		["Gromka the Flamewitch"] = false,
-		["Iruki Boldbeard"] = false,
-		["Wrathbone"] = false,
-	}
-
-	self.hlp.SelenePercentage = 0
-	self.hlp.TrogunStacks = 0
-	self.hlp.OctogStacks = 0
-	self.hlp.ShallaosStacks = { 
-		[1] = 0, [2] = 0, [3] = 0, [4] = 0, [5] = 0, 
-	}
-	self.hlp.WindInvokerTargetPlayer = {
-		["name"] = "", ["x"] = 0, ["y"] = 0, ["z"] = 0,
-	}
-
-	self.hlp.WindInvokerDiffs = { 
-		[1] = 0, [2] = 0, [3] = 0, [4] = 0 
-	}
-
-	self.hlp.WindInvokerInvisibleUnitID = 0
-
-	self.hlp.WindInvokerLastGametime = GameLib.GetGameTime() 
-
-end
-
-function RIPgold:PreparePlayers()
-
-	self.hlp.player = {
-		[1] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[2] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[3] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[4] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[5] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-	}
-
-	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
-
-	if getGroupMaxSize == 0 then
-
-		function GetPlayerName()
-		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetName() ~= nil
-		end
-
-		if pcall(GetPlayerName) then
-			local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
-			self.hlp.player[1].name = getCurrentPlayerName
-		end
-
-	else
-
-		for nGroupIndex=1,getGroupMaxSize do 
-
-			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
-			if getGroupMember ~= nil then
-
-				local getGroupMemberName = getGroupMember.strCharacterName
-				self.hlp.player[nGroupIndex].name = getGroupMemberName
-			end
-		end
+function RIPgold:PlaySound(sound)
+	if self.set.sound then
+		Sound.Play(sound)
 	end
 end
 
-function RIPgold:CheckForPlayerDeaths()
-
-	if self.hlp.isInDungeon then 
-
-		for nGroupIndex=1,GroupLib.GetGroupMaxSize() do
-			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
-
-			if getGroupMember ~= nil then
-
-				local getGroupMemberUnit = GroupLib.GetUnitForGroupMember(nGroupIndex)
-
-				if getGroupMemberUnit ~= nil then
-					local getDeathState = getGroupMemberUnit:IsDead()
-					local getGroupMemberName = getGroupMember.strCharacterName
-
-					if getDeathState then
-						if self.hlp.player[nGroupIndex].dead == false then
-
-							if self.hlp.alreadyFailedDeathless == false then
-								local getDeadPlayerName = getGroupMemberUnit:GetName()
-								local sToChat = string.format("%s just fucked up deathless challenge. RIPgold. :(.", getDeadPlayerName)
-								self:InformOthers(sToChat, false, true)
-								self:Debug(getGroupMemberUnit:GetName() .. " just fucked deathless.")
-								self.hlp.alreadyFailedDeathless = true
-							end
-
-							self:Debug(getGroupMemberUnit:GetName() .. " is dead.")
-							self.hlp.player[nGroupIndex].dead = true
-							self:CountFails(getGroupMemberName)
-
-						end
-					else
-						if self.hlp.player[nGroupIndex].dead then
-
-							self:Debug(getGroupMemberUnit:GetName() .. " is alive.")
-							self.hlp.player[nGroupIndex].dead = false
-						end
-					end
-				end
-			end
-		end
-	end
+function RIPgold:Debug(fnString)
+	ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_System, fnString, "RIPgold")
 end
+
+
+-----------------------------------------------------------------------------------------------
+-- Event Handlers
+-----------------------------------------------------------------------------------------------
 
 function RIPgold:OnPublicEventStart()
 
@@ -421,8 +220,8 @@ function RIPgold:OnPublicEventStart()
 
 				self.hlp.isInDungeon = true
 
-				self:InitializeVars()
-				self:PreparePlayers()
+				ALL:InitializeVars(self)
+				ALL:PreparePlayers(self)
 
 				self.checkDeadState:Start()
 					
@@ -514,7 +313,7 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 				if bossName == unitInCombatName then
 					self.hlp.boss[bossName] = true
 					-- info about fails at the end of the dungeon -> starts timer when these names occurs
-					self:ALL_precheckForBossDeaths(unitInCombat)
+					ALL:precheckForBossDeaths(self, unitInCombat)
 					self:Debug(bossName .. " alive.")
 				end
 			end
@@ -554,64 +353,8 @@ function RIPgold:OnUnitCreated(unit)
 
 	STL:OnUnitCreatedBeforeEnteringDungeon(self, unit) -- ! has to be outside hlp.isInDungeon
 	if self.hlp.isInDungeon then
-
 		STL:OnUnitCreated(self, unit)
 		SSM:OnUnitCreated(self, unit)
-	end
-end
-
-function RIPgold:ALL_precheckForBossDeaths(unitInCombat)
-	if self.hlp.isInDungeon then 
-		self.hlp.isBossDead.dead = false
-		self.hlp.isBossDead.name = unitInCombat:GetName()
-		self.hlp.isBossDead.ID = unitInCombat:GetId()
-		self.hlp.isBossDead.timer:Start()
-	end
-end
-
-function RIPgold:ALL_checkForBossDeaths()
-	if self.hlp.isInDungeon then 
-
-		function doesBossExist()
-		   local isBossDead = GameLib.GetUnitById(self.hlp.isBossDead.ID):IsDead() ~= nil
-		end
-
-		if pcall(doesBossExist) then
-			local isBossDead = GameLib.GetUnitById(self.hlp.isBossDead.ID):IsDead()
-			if isBossDead then
-				self.hlp.isBossDead.dead = true
-				self.hlp.isBossDead.timer:Stop()
-
-				if self.hlp.isBossDead.name == "Stormtalon" then
-					self:HowManyFails()
-				end
-				if self.hlp.isBossDead.name == "Spiritmother Selene the Corrupted" then
-					self:HowManyFails()
-				end
-				if self.hlp.isBossDead.name == "Mordechai Redmoon" then
-					self:HowManyFails()
-				end
-				if self.hlp.isBossDead.name == "Forgemaster Trogun" then
-					self:HowManyFails()
-				end
-				if self.hlp.isBossDead.name == "Wrathbone" then
-					--self:HowManyFails()
-				end
-				if self.hlp.isBossDead.name == "Blade-Wind the Invoker" then
-					self.hlp.doesChannelerExists:Stop() --test if its working
-				end
-				if self.hlp.isBossDead.name == "Bosun Octog" then
-					if self.hlp.OctogStacks < 10 then
-						local sToChat = string.format("Bosun got %s from 10 stacks of Broken Armor. The challenge is lost.", self.hlp.OctogStacks)
-						self:AddFails()
-						self:InformOthers(sToChat, false, false)
-					end
-				end
-
-				self:Debug(self.hlp.isBossDead.name .. " is dead.")
-				--SendVarToRover("boss", self.hlp.isBossDead)
-			end
-		end
 	end
 end
 
@@ -642,6 +385,10 @@ function RIPgold:OnCombatLogDamage(tEventArgs)
 	end
 end
 
+-----------------------------------------------------------------------------------------------
+-- Core Functions
+-----------------------------------------------------------------------------------------------
+
 function RIPgold:InformOthers(sToChat, setFailedChallenge, overrideGlobalVar)
 
 	if not overrideGlobalVar then
@@ -669,21 +416,9 @@ function RIPgold:SendToChat(fnString)
 		ChatSystemLib.Command("/i "..fnString)
 	elseif GroupLib.InGroup() then
 		ChatSystemLib.Command("/p "..fnString)
-		--self:Debug(fnString)
 	else
 		ChatSystemLib.Command("/s "..fnString)
-		--self:Debug(fnString)
 	end
-end
-
-function RIPgold:PlaySound(sound)
-	if self.set.sound then
-		Sound.Play(sound)
-	end
-end
-
-function RIPgold:Debug(fnString)
-	ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_System, fnString, "RIPgold")
 end
 
 function RIPgold:CountFails(getTarget)
@@ -741,6 +476,36 @@ end
 -----------------------------------------------------------------------------------------------
 -- RIPgoldForm Functions
 -----------------------------------------------------------------------------------------------
+
+-- icon for interface menu
+function RIPgold:OnInterfaceMenuListHasLoaded()
+	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "RIPgold", {"ToggleRIPgoldUI", "", ""}) --IconSprites:Icon_Windows_UI_CRB_Rival icon before (terrible meh)
+end
+
+-- on SlashCommand "/rip"
+function RIPgold:OnRIPgoldOn()
+
+	self.updateStatsUI:Start()
+
+	self:UpdateRIPgoldStatsUI()
+	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(0)
+
+	self.wndMain:Invoke() -- show the window
+
+	SendVarToRover("self.tSavedVariables",self.tSavedVariables)
+
+	--SendVarToRover("self.rat",self.tSavedVariables)
+
+	--table.insert("test", self.rat)	
+
+	--self:Debug(self.hlp.player[1].name .. ": " .. self.hlp.player[1].fails)
+	--self:Debug(self.hlp.player[2].name .. ": " .. self.hlp.player[2].fails)
+	--self:Debug(self.hlp.player[3].name .. ": " .. self.hlp.player[3].fails)
+	--self:Debug(self.hlp.player[4].name .. ": " .. self.hlp.player[4].fails)
+	--self:Debug(self.hlp.player[5].name .. ": " .. self.hlp.player[5].fails)
+
+end
+
 -- when the OK button is clicked
 function RIPgold:OnOK() -- not being used, all things save real time
 	self.wndMain:Close() -- hide the window
@@ -769,7 +534,7 @@ function RIPgold:UpdateRIPgoldStatsUI()
 			self.hlp.lastMemberCount = 0
 		elseif memberCount < 5 then
 			--if self.hlp.lastMemberCount < memberCount then
-				self:PreparePlayers()
+				ALL:PreparePlayers(self)
 				self:UpdateAnnounceUI()
 				self:UI_show_findPlayers(true)
 				--self.hlp.lastMemberCount = memberCount
@@ -777,7 +542,7 @@ function RIPgold:UpdateRIPgoldStatsUI()
 			self.hlp.lastMemberCount = memberCount
 		elseif memberCount == 5 then
 			if self.hlp.lastMemberCount ~= memberCount then
-				self:PreparePlayers()
+				ALL:PreparePlayers(self)
 				self:UpdateAnnounceUI()
 				self:UI_show_findPlayers(true)
 				--self.hlp.lastMemberCount = memberCount
@@ -795,7 +560,7 @@ function RIPgold:UpdateRIPgoldStatsUI()
 	local rowsNumber = 0
 	for i=1,5 do
 		if self.hlp.player == nil then
-			self:PreparePlayers()
+			ALL:PreparePlayers(self)
 		else
 			if self.hlp.player[i].name ~= "" then
 

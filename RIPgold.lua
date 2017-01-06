@@ -998,7 +998,6 @@ function RIPgold:OnBTN_statsClick()
 			self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(true)
 		end
 	end
-end
 
 	self.wndMain:FindChild("WRAP_findPlayers_checkboxes"):ArrangeChildrenHorz(0)
 

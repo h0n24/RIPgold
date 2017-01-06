@@ -20,6 +20,7 @@ require "GameLib"
 local RIPgold = {}
 
 -- modules for specific dungeons
+local ALL = Apollo.GetPackage("Module:ALL-1.0").tPackage
 local STL = Apollo.GetPackage("Module:STL-1.0").tPackage
 local KV = Apollo.GetPackage("Module:KV-1.0").tPackage
 local SSM = Apollo.GetPackage("Module:SSM-1.0").tPackage

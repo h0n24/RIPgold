@@ -27,9 +27,14 @@ function KV:OnCombat_OUT(self, unitInCombat)
 
 	if unitInCombat:GetName() == "Forgemaster Trogun" then
 		if self.hlp.TrogunStacks > 0 then
+
+			local sToChatMin = "Forgemaster got stacks of Primal Fire."
+			self:AddTooltips(sToChatMin)
+
 			local sToChat = string.format("Forgemaster got stacks of Primal Fire. The challenge is lost.", self.hlp.TrogunStacks)
-			self:AddFails()
 			self:InformOthers(sToChat, true, false)
+
+			self:AddFails()
 		end
 	end
 end
@@ -47,28 +52,37 @@ function KV:OnCombatLogDamage(self, tEventArgs)
 
 		if getSpell == "Bone Clamp" and getCaster == "Bone Cage" then
 
+			local sToChatMin = string.format("Felt into %s.", getSpell)
+			self:AddTooltip(getTarget, sToChatMin)
+
 			local sToChat = string.format("%s felt into %s. Grond the Corpsemaker's challenge is lost. Can't you just look under your feet?", getTarget, getSpell, getCaster)
-			self:CountFails(getTarget)
 			self:InformOthers(sToChat, true, false)
 
+			self:CountFails(getTarget)
 		end
 
 	end
 
 	if getSpell == "Homing Barrage" and getCaster == "Slavemaster Drokk" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. Come on, that AOE is smaller than Korean dick... How did you caught it?", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getSpell == "Phase Blast" and getCaster == "Eldan Phase Blaster" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. And obviously challenge is lost. Yeah, so you wanna get vaporized... And wanna fuck the most easiest challenge. Well done. Well done.", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getTarget == "Forgemaster Trogun" then

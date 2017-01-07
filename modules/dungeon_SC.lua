@@ -33,6 +33,9 @@ function SC:OnCombat_OUT(self, unitInCombat)
 				local sToChat = "Stew-Shaman Tugga ate Devour Flesh during combat. The challenge is lost. Someone from this team can't interrupt at right time. Is that you, slacker?"
 				self:AddFails()
 				self:InformOthers(sToChat, true, false)
+
+				local sToChatMin = "Stew-Shaman Tugga ate Devour Flesh during combat."
+				self:AddTooltips(sToChatMin)
 			end
 		end
 	end
@@ -55,6 +58,9 @@ function SC:OnCombatLogVitalModifier(self, tEventArgs)
 
 				self:CountFails(getTarget)
 				self:InformOthers(sToChat, true, false)
+
+				local sToChatMin = string.format("Was blinded.", getSpell)
+				self:AddTooltip(getTarget, sToChatMin)
 			end
 		end
 	end
@@ -69,18 +75,24 @@ function SC:OnCombatLogDamage(self, tEventArgs)
 
 	if getSpell == "Seismic Tremor" and getCaster == "Thunderfoot" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. Is really that hard to jump?", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getSpell == "Dark Fireball" and getCaster == "Laveka the Dark-Hearted" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. Come on, just evade small circular AOE, you are not that bad, are you?", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getTarget == "Bosun Octog" then

@@ -68,11 +68,11 @@ end
 function ALL:PreparePlayers(self)
 
 	self.hlp.player = {
-		[1] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[2] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[3] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[4] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
-		[5] = {["name"] = "", ["fails"] = 0, ["dead"] = false},
+		[1] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
+		[2] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
+		[3] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
+		[4] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
+		[5] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
 	}
 
 	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
@@ -120,11 +120,18 @@ function ALL:CheckForPlayerDeaths(self)
 					if getDeathState then
 						if self.hlp.player[nGroupIndex].dead == false then
 
-							if self.hlp.alreadyFailedDeathless == false then
-								local getDeadPlayerName = getGroupMemberUnit:GetName()
+							local getDeadPlayerName = getGroupMemberUnit:GetName()
+
+							if self.hlp.alreadyFailedDeathless then
+								local sToChatMin = "Died."
+								self:AddTooltip(getDeadPlayerName, sToChatMin)
+							else
+								local sToChatMin = "Ruined deathless challenge."
+								self:AddTooltip(getDeadPlayerName, sToChatMin)
+
 								local sToChat = string.format("%s just fucked up deathless challenge. RIPgold. :(.", getDeadPlayerName)
 								self:InformOthers(sToChat, false, true)
-								self:Debug(getGroupMemberUnit:GetName() .. " just fucked deathless.")
+
 								self.hlp.alreadyFailedDeathless = true
 							end
 
@@ -172,7 +179,7 @@ function ALL:HowManyFails(self)
 
 			-- supernew function
 			--if self.rat ~= nil then
-			if RIPgold:setContains(self.rat, self.hlp.player[i].name) then
+			if self:setContains(self.rat, self.hlp.player[i].name) then
 				
 				local rating = self.rat[self.hlp.player[i].name]["rating"]
 				if self.hlp.player[i].fails > 0 then
@@ -206,6 +213,10 @@ function ALL:HowManyFails(self)
 	end
 
 	SendVarToRover("self.rat",self.rat)
+
+	if GroupLib.AmILeader() then
+		ChatSystemLib.Command("/rq")
+	end
 
 end
 
@@ -256,9 +267,13 @@ function ALL:checkForBossDeaths(self)
 				end
 				if self.hlp.isBossDead.name == "Bosun Octog" then
 					if self.hlp.OctogStacks < 10 then
+						local sToChatMin = string.format("Bosun got %s from 10 stacks.", self.hlp.OctogStacks)
+						self:AddTooltips(sToChatMin)
+
 						local sToChat = string.format("Bosun got %s from 10 stacks of Broken Armor. The challenge is lost.", self.hlp.OctogStacks)
-						self:AddFails()
 						self:InformOthers(sToChat, false, false)
+
+						self:AddFails()
 					end
 				end
 

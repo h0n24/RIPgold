@@ -9,11 +9,14 @@ UIn.null = setmetatable ({}, {
   __toinn = function () return "null" end
 })
 
+local ALL = Apollo.GetPackage("Module:ALL-1.0").tPackage
+
 -----------------------------------------------------------------------------------------------
 -- Card buttons (top menu)
 -----------------------------------------------------------------------------------------------
 
 function UIn:OnBTN_statsClick(self)
+	-- visuals
 	self.wndMain:FindChild("WIN_stats"):Show(true)
 	self.wndMain:FindChild("WIN_ratings"):Show(false)
 	self.wndMain:FindChild("WIN_custom"):Show(false)
@@ -23,44 +26,12 @@ function UIn:OnBTN_statsClick(self)
 	self.wndMain:FindChild("TOP_BG_ratings"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
+    
+    -- update player stats
+    UIn:UpdateRIPgoldStats(self)
 
-	if self.hlp.isInDungeon then
-		self.wndMain:FindChild("INFO_stats"):SetText("Current dungeon")
-	else
-		self.wndMain:FindChild("INFO_stats"):SetText("Last dungeon")
-	end
-
-	self.wndMain:FindChild("TABLE_stats"):DeleteAll()
-	local rowsNumber = 0
-	for i=1,5 do
-		if self.hlp.player[i].name ~= "" then
-			rowsNumber = rowsNumber + 1
-			local tRow = self.wndMain:FindChild("TABLE_stats"):AddRow("")
-	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 1, self.hlp.player[i].name)
-
-	    	function GetRating()
-		   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
-			end
-
-			if pcall(GetRating) then
-				local rating = self.rat[self.hlp.player[i].name]["rating"] / 100
-				local rating = string.format("%2.0f", self.rat[self.hlp.player[i].name]["rating"] / 100)
-
-				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2,  rating)
-			else
-				self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
-			end
-	    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
-		end
-	end
-
-	local tableWidth = self.wndMain:GetWidth() - 50
-	local tableHeight = rowsNumber*25 + 30
-    self.wndMain:FindChild("TABLE_stats"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
-
-	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
-
-	--- announcing to nexus
+	-- announcing to nexus
+	-- → combobox
 	self.wndMain:FindChild("COMB_role"):DeleteAll()
 	self.wndMain:FindChild("COMB_role"):AddItem("anyone", "test", nil)
 	self.wndMain:FindChild("COMB_role"):AddItem("rating", "test", nil)
@@ -88,8 +59,10 @@ function UIn:OnBTN_statsClick(self)
 		end
 	end
 
+	-- → checkboxes
 	self.wndMain:FindChild("WRAP_findPlayers_checkboxes"):ArrangeChildrenHorz(0)
 
+	-- update announce box
 	UIn:UpdateAnnounce(self)
 
 	-- workaround for a wildstar bug with not opening combat boxes
@@ -98,7 +71,8 @@ function UIn:OnBTN_statsClick(self)
 	-- workaround for making arrow near COMB_role less visible (not possible via Houston)
 	self.wndMain:FindChild("COMB_role"):GetChildren()[2]:SetBGColor("99ffffff")
 
-	--self:Debug("GetMemberCount ".. GroupLib.GetMemberCount())
+	-- arrange items in WIN_stats window
+	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
 
 end
 
@@ -108,49 +82,37 @@ end
 -----------------------------------------------------------------------------------------------
 
 function UIn:UpdateRIPgoldStats(self)
-	self.wndMain:FindChild("TABLE_stats"):DeleteAll()
 
+    -----------
+    -- new floating table
+
+    -- showing announce based on if in dungeon or if not group full
 	if self.hlp.isInDungeon then
 		UIn:findPlayers_Show(self, false)
 	else
 		local memberCount = GroupLib.GetMemberCount()
-		if memberCount == 0 then
-			self.hlp.lastMemberCount = 0
-		elseif memberCount < 5 then
-			--if self.hlp.lastMemberCount < memberCount then
-				ALL:PreparePlayers(self)
-				UIn:UpdateAnnounce(self)
-				UIn:findPlayers_Show(self, true)
-				--self.hlp.lastMemberCount = memberCount
-			--end
-			self.hlp.lastMemberCount = memberCount
-		elseif memberCount == 5 then
-			if self.hlp.lastMemberCount ~= memberCount then
-				ALL:PreparePlayers(self)
-				UIn:UpdateAnnounce(self)
-				UIn:findPlayers_Show(self, true)
-				--self.hlp.lastMemberCount = memberCount
-			else
-				UIn:UpdateAnnounce(self)
-				UIn:findPlayers_Show(self, false)
-			end
-			self.hlp.lastMemberCount = memberCount
+		if memberCount <= 5 then
+			ALL:PreparePlayers(self)
+			UIn:UpdateAnnounce(self)
+			UIn:findPlayers_Show(self, true)
 		else
 			UIn:findPlayers_Show(self, false)
-			self.hlp.lastMemberCount = 5
 		end
 	end
 
-	local rowsNumber = 0
-	for i=1,5 do
-		if self.hlp.player == nil then
-			ALL:PreparePlayers(self)
-		else
-			if self.hlp.player[i].name ~= "" then
-
-				rowsNumber = rowsNumber + 1
-				local tRow = self.wndMain:FindChild("TABLE_stats"):AddRow("")
-		    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 1, self.hlp.player[i].name)
+	local totalFails = 0
+    for i=1,5 do
+    	if self.hlp.player == nil then
+	 		ALL:PreparePlayers(self)
+	 	else
+	    	if self.hlp.player[i].name == "" then
+	    		self.wndMain:FindChild("PL_name_"..i):SetText("")
+	    		self.wndMain:FindChild("PL_rr_"..i):SetText("")
+	    		self.wndMain:FindChild("PL_fails_"..i):SetText("")
+	    		self.wndMain:FindChild("PL_ctrl_"..i):Show(false)
+	    	else
+	    		self.wndMain:FindChild("PL_ctrl_"..i):Show(true)
+		    	self.wndMain:FindChild("PL_name_"..i):SetText(self.hlp.player[i].name)
 
 		    	function GetRating()
 			   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
@@ -160,21 +122,42 @@ function UIn:UpdateRIPgoldStats(self)
 					local rating = self.rat[self.hlp.player[i].name]["rating"] / 100
 					local rating = string.format("%2.0f", self.rat[self.hlp.player[i].name]["rating"] / 100)
 
-					self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2,  rating)
+					self.wndMain:FindChild("PL_rr_"..i):SetText(rating)
 				else
-					self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 2, "0")
+					self.wndMain:FindChild("PL_rr_"..i):SetText("10")
+				end
+		    	
+		    	self.wndMain:FindChild("PL_fails_"..i):SetText(self.hlp.player[i].fails)
+
+		    	if self.hlp.player[i].tooltip == "" then
+		    		self.wndMain:FindChild("BTN_PL_info_"..i):SetTooltip("No fails.")
+		    	else
+		    		self.wndMain:FindChild("BTN_PL_info_"..i):SetTooltip(self.hlp.player[i].tooltip)
+		    	end
+
+		    	if self.hlp.player[i].fails == 0 then
+		    		self.wndMain:FindChild("PL_fails_"..i):Show(false)
+					self.wndMain:FindChild("PL_ctrl_"..i):Show(false)
+				else
+					self.wndMain:FindChild("PL_fails_"..i):Show(true)
+					self.wndMain:FindChild("PL_ctrl_"..i):Show(true)
 				end
 
-		    	self.wndMain:FindChild("TABLE_stats"):SetCellText(tRow, 3, self.hlp.player[i].fails)
-			end
+				totalFails = totalFails + self.hlp.player[i].fails
+
+		    end
 		end
-	end
+    end
 
-	local tableWidth = self.wndMain:GetWidth() - 70
-	local tableHeight = rowsNumber*25 + 30
-    self.wndMain:FindChild("TABLE_stats"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
+    if totalFails == 0 then
+		self.wndMain:FindChild("PL_fails_header"):Show(false)
+		self.wndMain:FindChild("PL_ctrl_header"):Show(false)
+    else
+		self.wndMain:FindChild("PL_fails_header"):Show(true)
+		self.wndMain:FindChild("PL_ctrl_header"):Show(true)
+    end
 
-	self.wndMain:FindChild("WIN_stats"):ArrangeChildrenVert(0)
+    --self:Debug("GetMemberCount ".. GroupLib.GetMemberCount())
 
 end
 
@@ -186,20 +169,14 @@ end
 function UIn:UpdateAnnounce(self)
 	if self.set.CHCK_PLZ_dps == true then
 		self.wndMain:FindChild("CHCK_PLZ_dps"):SetCheck(self.set.CHCK_PLZ_dps)
-	else
-		--self.wndMain:FindChild("CHCK_PLZ_dps"):SetCheck(false)
 	end
 
 	if self.set.CHCK_PLZ_heal == true then
 		self.wndMain:FindChild("CHCK_PLZ_heal"):SetCheck(self.set.CHCK_PLZ_heal)
-	else
-		--self.wndMain:FindChild("CHCK_PLZ_heal"):SetCheck(false)
 	end
 
 	if self.set.CHCK_PLZ_tank == true then
 		self.wndMain:FindChild("CHCK_PLZ_tank"):SetCheck(self.set.CHCK_PLZ_tank)
-	else
-		--self.wndMain:FindChild("CHCK_PLZ_tank"):SetCheck(false)
 	end
 
 	self.set.CHCK_PLZ_dps = self.wndMain:FindChild("CHCK_PLZ_dps"):IsChecked()
@@ -313,11 +290,17 @@ function UIn:onBTN_announceClick(self)
 	local announce = self.wndMain:FindChild("BOX_announce"):GetText()
 	ChatSystemLib.Command(announce)
 
-	-- set open group
-	GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
+	if GroupLib.AmILeader() then
+		-- set open group
+		GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
 
-	-- set open referrals
-	GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)
+		-- set open referrals
+		GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)
+
+		if announce == "full" then -- need rework if the reQue addon is installed
+			ChatSystemLib.Command("/rq")
+		end
+	end
 end
 
 function UIn:CHCK_PLZ_dpsClick(self)

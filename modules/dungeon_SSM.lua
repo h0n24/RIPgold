@@ -47,6 +47,9 @@ function SSM:OnCombat_OUT(self, unitInCombat)
 					countedFails = countedFails - 5
 					local oldFails = self.hlp.player[i].fails
 					self.hlp.player[i].fails = oldFails + countedFails
+
+					local sToChatMin = string.format("Got %s (+5) stacks from Shallaos.", countedFails)
+					self:AddTooltip(self.hlp.player[i].name, sToChatMin)
 				end
 
 				failsInfo = string.format("%s%s %s (%s %s)", failsInfo, additionalComma, self.hlp.player[i].name, self.hlp.ShallaosStacks[i], failWord)
@@ -126,34 +129,46 @@ function SSM:OnCombatLogDamage(self, tEventArgs)
 
 	if getSpell == "Righteous Fire" and getCaster == "Torine Totem of Flame" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost.", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getSpell == "Molten Wave" and getCaster == "Rayna Darkspeaker" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. You are bad at dancing between fire walls.", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getSpell == "Plague Splatter" and getCaster == "Ondu Lifeweaver" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. You have to be blind to miss telegraph that big.", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getSpell == "Corruption Pustule" and getCaster == "Moldwood Swarmling" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. Vitara's heart challenge is lost. If you can't run, kill him in less than 60s.", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 	if getTarget == "Spiritmother Selene's Echo" then
@@ -178,10 +193,15 @@ function SSM:OnUnitCreated(self, unit)
 
 		if (100 > SelenePercentage and SelenePercentage > 0) then
 				
-			local SelenePercentageString = string.format("%.f %%", SelenePercentage);
+			local SelenePercentageString = string.format("%.f %%", SelenePercentage)
+
+			local sToChatMin = string.format("Spiritmother was at %s health.", SelenePercentageString)
+			self:AddTooltips(sToChatMin)
+
 			local sToChat = string.format("Spiritmother was at %s health. Challenge is lost. She has to be full at the end of battle.", SelenePercentageString)
-			self:AddFails()
 			self:InformOthers(sToChat, true, false)
+
+			self:AddFails()
 		end
 	end
 end

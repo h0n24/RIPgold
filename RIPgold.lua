@@ -112,16 +112,27 @@ function RIPgold:OnDocLoaded()
 
 		Apollo.RegisterEventHandler("ChangeWorld", "OnWorldChange", self)
 
+		-- testing purposes
+		Apollo.RegisterEventHandler("Group_Join", "OnGroup_Join", self)
+		Apollo.RegisterEventHandler("Group_Left", "OnGroup_Left", self)
+		Apollo.RegisterEventHandler("Group_Player_Left", "OnGroup_Player_Left", self)
+		Apollo.RegisterEventHandler("Group_Disbanded", "OnGroup_Disbanded", self)
+		Apollo.RegisterEventHandler("Group_Add", "OnGroup_Add", self)
+		Apollo.RegisterEventHandler("Group_Changed", "OnGroup_Changed", self)
+		Apollo.RegisterEventHandler("Group_Other_Left", "OnGroup_Other_Left", self)
+		Apollo.RegisterEventHandler("Group_Updated", "OnGroup_Updated", self)
+		
+
 		-- first: seconds how often is repeated, second if its repeating
-		self.checkDeadState = ApolloTimer.Create(1, true, "ALL:CheckForPlayerDeaths(self)", self) 
+		self.checkDeadState = ApolloTimer.Create(1, true, "REDIR_checkForPlayerDeaths", self) 
 		self.checkDeadState:Stop()
 
-		-- updating ui every second when opened
-		self.updateStatsUI = ApolloTimer.Create(1, true, "UIn:UpdateRIPgoldStats(self)", self)
-		self.updateStatsUI:Stop()
+		-- updating ui every second when opened → already made new fuction, updated on fails
+		-- self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
+		-- self.updateStatsUI:Stop()
 
 		self.hlp.isBossDead = {
-			["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = ApolloTimer.Create(1, true, "ALL:checkForBossDeaths(self)", self)
+			["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = ApolloTimer.Create(1, true, "REDIR_checkForBossDeaths", self)
 		}
 		--self.hlp.isBossDead = {}
 		--self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "ALL:checkForBossDeaths(self)", self)
@@ -130,13 +141,14 @@ function RIPgold:OnDocLoaded()
 		--self.hlp.isBossDead.name = ""
 		--self.hlp.isBossDead.dead = false
 
-		self.hlp.doesChannelerExists = ApolloTimer.Create(1, true, "STL:checkForChannelerDeaths(self)", self)
+		self.hlp.doesChannelerExists = ApolloTimer.Create(1, true, "REDIR_checkForChannelerDeaths", self)
 		self.hlp.doesChannelerExists:Stop()
 
 		if self.tSavedVariables == nil then
 
 			self.hlp.peMatch = nil
 			self.hlp.isInDungeon = false
+			self.hlp.updateStatsUI = false
 
 			ALL:InitializeVars(self)
 
@@ -231,6 +243,8 @@ function RIPgold:OnPublicEventStart()
 					
 				self.hlp.peMatch = true
 
+				UIn:OnBTN_statsClick(self)
+
 				SendVarToRover("self", self)
 				
 				return true
@@ -241,7 +255,7 @@ end
 
 function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 
-	if not GroupLib.InRaid() then --if not in raid
+	if self.hlp.isInDungeon then --if not in raid → if in dungeon
 
 		--local timeinfo = string.format("OnPublicEventStatsUpdate base - %s", GameLib.GetGameTime())
 		--SendVarToRover(timeinfo, peUpdated)
@@ -295,9 +309,7 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			--SendVarToRover(timeinfo, getObjectives)
 
 		end
-
 	end -- if not in raid
-
 end
 
 function RIPgold:OnWorldChange()
@@ -305,6 +317,8 @@ function RIPgold:OnWorldChange()
 	-- updated function: resets only info about match, not resetting everything every world change
 	self.hlp.peMatch = nil
 	self.hlp.isInDungeon = false
+
+	UIn:OnBTN_statsClick(self)
 end
 
 function RIPgold:OnCombat(unitInCombat, bInCombat)
@@ -389,6 +403,64 @@ function RIPgold:OnCombatLogDamage(tEventArgs)
 	end
 end
 
+-- testing purposes
+
+function RIPgold:OnGroup_Join(var)
+	SendVarToRover("OnGroup_Join "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+end
+
+function RIPgold:OnGroup_Left(var)
+	SendVarToRover("OnGroup_Left "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+
+	-- somehow not working
+end
+
+function RIPgold:OnGroup_Player_Left(var)
+	SendVarToRover("OnGroup_Player_Left "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+end
+
+function RIPgold:OnGroup_Other_Left(var)
+	SendVarToRover("OnGroup_Other_Left "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+end
+
+function RIPgold:OnGroup_Disbanded(var)
+	SendVarToRover("OnGroup_Disbanded "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+end
+
+function RIPgold:OnGroup_Add(var)
+	SendVarToRover("OnGroup_Add "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+end
+
+function RIPgold:OnGroup_Changed(var)
+	SendVarToRover("OnGroup_Changed "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+end
+
+function RIPgold:OnGroup_Updated(var)
+	--SendVarToRover("OnGroup_Updated "..GameLib.GetGameTime(), var)
+
+	--UIn:OnBTN_statsClick(self)
+
+	-- cycles virtually every sec
+end
+
+
+
+
+
 -----------------------------------------------------------------------------------------------
 -- Core Functions
 -----------------------------------------------------------------------------------------------
@@ -455,6 +527,11 @@ function RIPgold:CountFails(getTarget)
 			end
 		end
 	end
+
+	-- update UI if the window is opened
+	if self.hlp.updateStatsUI then
+		UIn:UpdateRIPgoldStats(self)
+	end
 end
 
 function RIPgold:AddFails()
@@ -475,8 +552,76 @@ function RIPgold:AddFails()
 			end
 		end
 	end
+
+	-- update UI if the window is opened
+	if self.hlp.updateStatsUI then
+		UIn:UpdateRIPgoldStats(self)
+	end	
 end
 
+function RIPgold:AddTooltip(getTarget, getMessage)
+	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
+
+	if getGroupMaxSize == 0 then
+
+		local getTooltipOld = self.hlp.player[1].tooltip
+		self.hlp.player[1].tooltip = getTooltipOld .. getMessage .. "\n"
+	else
+		for nGroupIndex=1,getGroupMaxSize do 
+
+			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
+			if getGroupMember ~= nil then
+
+				local getGroupMemberName = getGroupMember.strCharacterName
+				if getGroupMemberName == getTarget then
+
+					local getTooltipOld = self.hlp.player[nGroupIndex].tooltip
+					self.hlp.player[nGroupIndex].tooltip = getTooltipOld .. getMessage .. " \n"
+				end
+			end
+		end
+	end
+end
+
+function RIPgold:AddTooltips(getMessage)
+	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
+
+	if getGroupMaxSize == 0 then
+
+		local getTooltipOld = self.hlp.player[1].tooltip
+		self.hlp.player[1].tooltip = getTooltipOld .. getMessage .. "\n"
+	else
+		for nGroupIndex=1,getGroupMaxSize do
+
+			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
+			if getGroupMember ~= nil then
+
+				local getGroupMemberName = getGroupMember.strCharacterName
+				if getGroupMemberName == getTarget then
+
+					local getTooltipOld = self.hlp.player[nGroupIndex].tooltip
+					self.hlp.player[nGroupIndex].tooltip = getTooltipOld .. getMessage .. " \n"
+				end
+			end
+		end
+	end
+end
+
+-----------------------------------------------------------------------------------------------
+-- Timers redirect
+-----------------------------------------------------------------------------------------------
+
+function RIPgold:REDIR_checkForBossDeaths()
+	ALL:checkForBossDeaths(self)
+end
+
+function RIPgold:REDIR_checkForPlayerDeaths()
+	ALL:CheckForPlayerDeaths(self)
+end
+
+function RIPgold:REDIR_checkForChannelerDeaths()
+	STL:checkForChannelerDeaths(self)
+end
 -----------------------------------------------------------------------------------------------
 -- UI Functions (RIPgoldForm Functions)
 -----------------------------------------------------------------------------------------------
@@ -489,9 +634,10 @@ end
 -- on SlashCommand "/rip"
 function RIPgold:OnRIPgoldOn()
 
-	self.updateStatsUI:Start()
-
+	--self.updateStatsUI:Start() -- not being used
+	self.hlp.updateStatsUI = true
 	UIn:UpdateRIPgoldStats(self)
+
 	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(0)
 
 	self.wndMain:Invoke() -- show the window
@@ -512,7 +658,8 @@ end
 -- when the Cancel button is clicked
 function RIPgold:OnCancel()
 	self.wndMain:Close() -- hide the window
-	self.updateStatsUI:Stop()
+	--self.updateStatsUI:Stop() -- not being used
+	self.hlp.updateStatsUI = false
 end
 
 -- card menu, top menu buttons click
@@ -540,12 +687,12 @@ end
 -- ## card: my group (old statistics)
 
 -- function RIPgold:UpdateRIPgoldStatsUI() -- not being used
--- 	UIn:UpdateRIPgoldStats(self)
+--  	UIn:UpdateRIPgoldStats(self)
 -- end
 
--- function RIPgold:UpdateAnnounceUI() -- not being used
+--function RIPgold:UpdateAnnounceUI() -- not being used
 -- 	UIn:UpdateAnnounceUI(self)
--- end
+--end
 
 function RIPgold:onBOX_announceChange(wndControl)
 	UIn:onBOX_announceChange(self, wndControl)
@@ -571,6 +718,28 @@ end
 function RIPgold:CHCK_PLZ_tankClick()
 	UIn:CHCK_PLZ_tankClick(self)
 end
+
+-- whispers
+function RIPgold:BTN_PL_whisper_1Click()
+	ChatSystemLib.Command("/w "..self.hlp.player[1].name.." You made those fails: "..self.hlp.player[1].tooltip)
+end
+
+function RIPgold:BTN_PL_whisper_2Click()
+	ChatSystemLib.Command("/w "..self.hlp.player[2].name.." You made those fails: "..self.hlp.player[2].tooltip)
+end
+
+function RIPgold:BTN_PL_whisper_3Click()
+	ChatSystemLib.Command("/w "..self.hlp.player[3].name.." You made those fails: "..self.hlp.player[3].tooltip)
+end
+
+function RIPgold:BTN_PL_whisper_4Click()
+	ChatSystemLib.Command("/w "..self.hlp.player[4].name.." You made those fails: "..self.hlp.player[4].tooltip)
+end
+
+function RIPgold:BTN_PL_whisper_5Click()
+	ChatSystemLib.Command("/w "..self.hlp.player[5].name.." You made those fails: "..self.hlp.player[5].tooltip)
+end
+
 
 -----------------------------------------------------------------------------------------------
 -- Save and Restore Data

@@ -28,17 +28,24 @@ function STL:OnCombatLogDamage(self, tEventArgs)
 
 	if getSpell == "Twister" and getCaster == "Aethros Twister" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. Aethros's challenge is lost. What's so problematic at dancing between tornados?", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
+
+		self:CountFails(getTarget)
 	end
 
 	if getSpell == "Lightning Strike" and getCaster == "Stormtalon" then
 
+		local sToChatMin = string.format("Was hit by %s.", getSpell)
+		self:AddTooltip(getTarget, sToChatMin)
+
 		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. Remember! Run around after moo and don't stay in the middle of moving telegraph.", getTarget, getSpell, getCaster)
-		self:CountFails(getTarget)
 		self:InformOthers(sToChat, true, false)
 
+		self:CountFails(getTarget)
 	end
 
 end
@@ -219,9 +226,13 @@ function STL:getCircleDistances(self, unit)
 				missedDistance = Apollo.FormatNumber(missedDistance, 2, true)
 
 				if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor
+					local sToChatMin = string.format("Missed placing AOE by %s m.", missedDistance)
+					self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
+					
 					local sToChat = string.format("%s missed placing AOE by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
-					self:Debug(sToChat)
 					self:InformOthers(sToChat, true, false)
+					self:Debug(sToChat)
+
 					self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
 				end
 			end

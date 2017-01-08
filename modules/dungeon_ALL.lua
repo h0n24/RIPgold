@@ -41,6 +41,8 @@ function ALL:InitializeVars(self)
 		["Wrathbone"] = false,
 	}
 
+	self.hlp.event = {}
+
 	self.hlp.SelenePercentage = 0
 	self.hlp.TrogunStacks = 0
 	self.hlp.OctogStacks = 0
@@ -120,8 +122,18 @@ function ALL:CheckForPlayerDeaths(self)
 					if getDeathState then
 						if self.hlp.player[nGroupIndex].dead == false then
 
-							local getDeadPlayerName = getGroupMemberUnit:GetName()
+							-- check if deathless doesnt collide with event's deathless (solves bug when player got teleported dead to instance or uses /stuck)
+							if self.hlp.event["Deathless in the Dungeon"] == 1 then
+								self.hlp.alreadyFailedDeathless = false
+								self:Debug("Deathless in the Dungeon → 1")
+							end
 
+							if self.hlp.event["Deathless in the Dungeon"] == 0 then
+								self.hlp.alreadyFailedDeathless = true
+								self:Debug("Deathless in the Dungeon → 0")
+							end
+
+							local getDeadPlayerName = getGroupMemberUnit:GetName()
 							if self.hlp.alreadyFailedDeathless then
 								local sToChatMin = "Died."
 								self:AddTooltip(getDeadPlayerName, sToChatMin)
@@ -132,7 +144,7 @@ function ALL:CheckForPlayerDeaths(self)
 								local sToChat = string.format("%s just fucked up deathless challenge. RIPgold. :(.", getDeadPlayerName)
 								self:InformOthers(sToChat, false, true)
 
-								self.hlp.alreadyFailedDeathless = true
+								--self.hlp.alreadyFailedDeathless = true -- found better solution, to be removed soon
 							end
 
 							self:Debug(getGroupMemberUnit:GetName() .. " is dead.")

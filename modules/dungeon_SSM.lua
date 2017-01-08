@@ -140,13 +140,16 @@ function SSM:OnCombatLogDamage(self, tEventArgs)
 
 	if getSpell == "Molten Wave" and getCaster == "Rayna Darkspeaker" then
 
-		local sToChatMin = string.format("Was hit by %s.", getSpell)
-		self:AddTooltip(getTarget, sToChatMin)
+		if self.hlp.boss["Rayna Darkspeaker"] then
 
-		local sToChat = string.format("%s was hit by %s. %s's challenge is lost. You are bad at dancing between fire walls.", getTarget, getSpell, getCaster)
-		self:InformOthers(sToChat, true, false)
+			local sToChatMin = string.format("Was hit by %s.", getSpell)
+			self:AddTooltip(getTarget, sToChatMin)
 
-		self:CountFails(getTarget)
+			local sToChat = string.format("%s was hit by %s. %s's challenge is lost. You are bad at dancing between fire walls.", getTarget, getSpell, getCaster)
+			self:InformOthers(sToChat, true, false)
+
+			self:CountFails(getTarget)
+		end
 	end
 
 	if getSpell == "Plague Splatter" and getCaster == "Ondu Lifeweaver" then
@@ -194,6 +197,10 @@ function SSM:OnUnitCreated(self, unit)
 		if (100 > SelenePercentage and SelenePercentage > 0) then
 				
 			local SelenePercentageString = string.format("%.f %%", SelenePercentage)
+
+			if SelenePercentageString == 100 then
+				SelenePercentageString = Apollo.FormatNumber(SelenePercentage, 2, true)
+			end
 
 			local sToChatMin = string.format("Spiritmother was at %s health.", SelenePercentageString)
 			self:AddTooltips(sToChatMin)

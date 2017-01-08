@@ -9,6 +9,10 @@
 -- todo: some spells are counting twice or more per second, make a timer for every spell to add one failpoint once per two seconds (bugging bosses -> mordechai)
 -- todo: SSM: write whisp message to people who are dead after 2s after spirit relics being placed "you can rezz up"
 
+-- todo: iccom: at making group, share player's rating (potentially ilvl and max prime level)
+
+-- todo: make announcing more simpler -> include repeating announcing to normal announcing
+
 require "Apollo"
 require "Window"
 require "GroupLib"
@@ -121,6 +125,8 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterEventHandler("Group_Changed", "OnGroup_Changed", self)
 		Apollo.RegisterEventHandler("Group_Other_Left", "OnGroup_Other_Left", self)
 		Apollo.RegisterEventHandler("Group_Updated", "OnGroup_Updated", self)
+		Apollo.RegisterEventHandler("Group_Remove", "OnGroup_Remove", self)
+
 		
 
 		-- first: seconds how often is repeated, second if its repeating
@@ -297,10 +303,25 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			local objectives = peUpdated:GetObjectives()
 
 			for i,obj in pairs(objectives) do
-				if obj:GetShortDescription() == "Deathless in the Dungeon" then
-					SendVarToRover("deathless", obj)
-				end
+
+				eventName = obj:GetShortDescription()
+				eventStatus = obj:GetStatus()
+
+				self.hlp.event[eventName] = eventStatus
+
+				-- to be deleted soon
+				-- if obj:GetShortDescription() == "Deathless in the Dungeon" then
+
+				-- 	SendVarToRover("deathless", obj)
+				-- 	SendVarToRover("deathless status ", obj:GetStatus())
+
+				-- 	-- if obj:GetStatus() == 1 then
+				-- 	-- 	self:Debug("deathless existuje")
+				-- 	-- end
+				-- end
 			end
+
+			SendVarToRover("events", self.hlp.event)
 
 			-- test purpose
 
@@ -417,6 +438,14 @@ function RIPgold:OnGroup_Left(var)
 	UIn:OnBTN_statsClick(self)
 
 	-- somehow not working
+end
+
+function RIPgold:OnGroup_Remove(var)
+	SendVarToRover("OnGroup_Remove "..GameLib.GetGameTime(), var)
+
+	UIn:OnBTN_statsClick(self)
+
+	-- just testing this, will it work?
 end
 
 function RIPgold:OnGroup_Player_Left(var)
@@ -596,12 +625,8 @@ function RIPgold:AddTooltips(getMessage)
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 			if getGroupMember ~= nil then
 
-				local getGroupMemberName = getGroupMember.strCharacterName
-				if getGroupMemberName == getTarget then
-
-					local getTooltipOld = self.hlp.player[nGroupIndex].tooltip
-					self.hlp.player[nGroupIndex].tooltip = getTooltipOld .. getMessage .. " \n"
-				end
+				local getTooltipOld = self.hlp.player[nGroupIndex].tooltip
+				self.hlp.player[nGroupIndex].tooltip = getTooltipOld .. getMessage .. " \n"
 			end
 		end
 	end
@@ -721,23 +746,23 @@ end
 
 -- whispers
 function RIPgold:BTN_PL_whisper_1Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[1].name.." You made those fails: "..self.hlp.player[1].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[1].name.." Mistakes you've made: "..self.hlp.player[1].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_2Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[2].name.." You made those fails: "..self.hlp.player[2].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[2].name.." Mistakes you've made: "..self.hlp.player[2].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_3Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[3].name.." You made those fails: "..self.hlp.player[3].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[3].name.." Mistakes you've made: "..self.hlp.player[3].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_4Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[4].name.." You made those fails: "..self.hlp.player[4].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[4].name.." Mistakes you've made: "..self.hlp.player[4].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_5Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[5].name.." You made those fails: "..self.hlp.player[5].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[5].name.." Mistakes you've made: "..self.hlp.player[5].tooltip)
 end
 
 

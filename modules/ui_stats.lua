@@ -291,8 +291,17 @@ function UIn:onBTN_announceClick(self)
 	ChatSystemLib.Command(announce)
 
 	if GroupLib.AmILeader() then
+
 		-- set open group
 		GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
+
+		SendVarToRover("invitation", GroupLib.GetJoinRequestMethod())
+
+		 -- workaround: because normal one doesnt work 100%
+		if GroupLib.GetJoinRequestMethod() ~= GroupLib.InvitationMethod.Open then
+			--GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
+			ChatSystemLib.Command("/eval GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)")
+		end
 
 		-- set open referrals
 		GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)

@@ -24,6 +24,11 @@ function STL:OnCombatLogDamage(self, tEventArgs)
 		-- workaround, no clue why Invoker is exception from global boss incombat function, but it shouldnt fuck up with other things as well as it will be set false after he dies (which works)
 		self.hlp.boss["Blade-Wind the Invoker"] = true
 
+		-- workaround, spell Shock is being casted when Channelers get out of invulnerable shield -> so it proceeds in aoe counting phase
+		if getSpell == "Shock" then
+			self.hlp.WindInvokerChannelerTargetable = true
+		end
+
 	end
 
 	if getSpell == "Twister" and getCaster == "Aethros Twister" then
@@ -68,11 +73,33 @@ end
 function STL:OnUnitCreated(self, unit)
 
 	if self.hlp.boss["Blade-Wind the Invoker"] then
-		if unit:GetName() == "Hostile Invisible Unit for Fields (0 hit radius)" then
-			--SendVarToRover("unit created ".. GameLib.GetGameTime(), unit)
-			self.hlp.WindInvokerInvisibleUnitID = unit:GetId()
-			STL:getPlayerWithCircle(self, unit)
-			self.hlp.doesChannelerExists:Start()
+
+		-- testing purposes
+		-- for chanellerIndex=1,4 do
+		-- 	function doesThundercallExist()
+		-- 	   local getThundercallReady = GameLib.GetUnitById(self.hlp.WindInvokerChanellerID[chanellerIndex]) ~= nil
+		-- 	end
+
+		-- 	if pcall(doesThundercallExist) then
+		-- 		local getThundercallReady = GameLib.GetUnitById(self.hlp.WindInvokerChanellerID[chanellerIndex])
+		-- 		if getThundercallReady then
+		-- 			SendVarToRover("chaneller"..GameLib.GetGameTime(),getThundercallReady)
+
+		-- 			SendVarToRover("chaneller valid"..GameLib.GetGameTime(),getThundercallReady:IsValid())
+		-- 			SendVarToRover("chaneller nameplate"..GameLib.GetGameTime(),getThundercallReady:ShouldShowNamePlate())
+		-- 		end
+		-- 	end
+		-- end
+
+		-- end of testing purposes
+
+		if self.hlp.WindInvokerChannelerTargetable then
+			if unit:GetName() == "Hostile Invisible Unit for Fields (0 hit radius)" then
+				--SendVarToRover("unit created ".. GameLib.GetGameTime(), unit)
+				self.hlp.WindInvokerInvisibleUnitID = unit:GetId()
+				STL:getPlayerWithCircle(self, unit)
+				self.hlp.doesChannelerExists:Start()
+			end
 		end
 	end
 end
@@ -139,6 +166,25 @@ end
 function STL:getPlayerWithCircle(self, unit)
 	
 	local circlePosition = unit:GetPosition()
+
+	-- testing purposes
+	-- for chanellerIndex=1,4 do
+	-- 	function doesThundercallExist()
+	-- 	   local getThundercallReady = GameLib.GetUnitById(self.hlp.WindInvokerChanellerID[chanellerIndex]) ~= nil
+	-- 	end
+
+	-- 	if pcall(doesThundercallExist) then
+	-- 		local getThundercallReady = GameLib.GetUnitById(self.hlp.WindInvokerChanellerID[chanellerIndex])
+	-- 		if getThundercallReady then
+	-- 			SendVarToRover("chaneller"..GameLib.GetGameTime(),getThundercallReady)
+
+	-- 			SendVarToRover("chaneller nameplate"..GameLib.GetGameTime(),getThundercallReady:ShouldShowNamePlate())
+
+	-- 		end
+	-- 	end
+	-- end
+
+	-- end of testing purposes
 
 	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
 	if getGroupMaxSize == 0 then
@@ -223,17 +269,41 @@ function STL:getCircleDistances(self, unit)
 			local channelerRadius = 7.89 -- the best constant I've found after numbers of tries, still only guess, not real constant
 			if shortestDistance > channelerRadius then
 				local missedDistance = shortestDistance - channelerRadius
+
+				SendVarToRover(self.hlp.WindInvokerTargetPlayer["name"].. " "..GameLib.GetGameTime(), missedDistance)
+				SendVarToRover("shortestDistance "..GameLib.GetGameTime(), shortestDistance)
 				missedDistance = Apollo.FormatNumber(missedDistance, 2, true)
 
-				if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor
+				if self.hlp.event["Stormchaser"] == 1 then -- new function, in testing
+
+				--if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor → possibly not happening after self.hlp.WindInvokerChannelerTargetable being true
 					local sToChatMin = string.format("Missed placing AOE by %s m.", missedDistance)
 					self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
-					
+
 					local sToChat = string.format("%s missed placing AOE by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
-					self:InformOthers(sToChat, true, false)
-					self:Debug(sToChat)
+					--self:InformOthers(sToChat, true, false)
+					self:InformOthers(sToChat, false, false)
+					--self:Debug(sToChat)
 
 					self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
+				--end
+
+				end
+
+				if self.hlp.event["Stormchaser"] == 0 then -- new function, in testing
+
+				--if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor → possibly not happening after self.hlp.WindInvokerChannelerTargetable being true
+					local sToChatMin = string.format("Missed placing circle by %s m.", missedDistance)
+					self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
+
+					local sToChat = string.format("%s missed placing circle by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
+					--self:InformOthers(sToChat, true, false)
+					self:InformOthers(sToChat, false, false)
+					--self:Debug(sToChat)
+
+					self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
+				--end
+
 				end
 			end
 		end

@@ -184,6 +184,7 @@ function UIn:UpdateAnnounce(self)
 	self.set.CHCK_PLZ_tank = self.wndMain:FindChild("CHCK_PLZ_tank"):IsChecked()
 
 
+	self.hlp.lastAnnouncingText = self.wndMain:FindChild("BOX_announce"):GetText()
 
 	local announcingText = "/n " --longest: /n LFxM for vets, 10k+ dps or 6k+ heal or tanking class
 
@@ -200,6 +201,10 @@ function UIn:UpdateAnnounce(self)
 
 	else
 		announcingText = announcingText .. "full"
+	end
+
+	if self.hlp.lastAnnouncingText ~= announcingText then
+		self:Debug("uaaa")
 	end
 
 	self.wndMain:FindChild("BOX_announce"):SetText(announcingText)
@@ -293,18 +298,23 @@ function UIn:onBTN_announceClick(self)
 	if GroupLib.AmILeader() then
 
 		-- set open group
-		GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
+		if GroupLib.GetJoinRequestMethod() ~= GroupLib.InvitationMethod.Open then
+			ChatSystemLib.Command("/eval GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)")
+			--GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
+
+			-- workaround: because normal one doesnt work 100%
+			if GroupLib.GetJoinRequestMethod() ~= GroupLib.InvitationMethod.Open then
+				GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
+				
+			end			
+		end
 
 		SendVarToRover("invitation", GroupLib.GetJoinRequestMethod())
 
-		 -- workaround: because normal one doesnt work 100%
-		if GroupLib.GetJoinRequestMethod() ~= GroupLib.InvitationMethod.Open then
-			--GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
-			ChatSystemLib.Command("/eval GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)")
-		end
-
 		-- set open referrals
-		GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)
+		if GroupLib.GetReferralMethod() ~= GroupLib.InvitationMethod.Open then
+			GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)
+		end
 
 		if announce == "full" then -- need rework if the reQue addon is installed
 			ChatSystemLib.Command("/rq")

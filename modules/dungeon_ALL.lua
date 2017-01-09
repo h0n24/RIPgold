@@ -53,6 +53,8 @@ function ALL:InitializeVars(self)
 		["name"] = "", ["x"] = 0, ["y"] = 0, ["z"] = 0,
 	}
 
+	self.hlp.varsForChallengeActive = {}
+
 	self.hlp.WindInvokerDiffs = { 
 		[1] = 0, [2] = 0, [3] = 0, [4] = 0 
 	}
@@ -108,61 +110,78 @@ function ALL:CheckForPlayerDeaths(self)
 
 	if self.hlp.isInDungeon then 
 
-		for nGroupIndex=1,GroupLib.GetGroupMaxSize() do
-			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
+		local getGroupMaxSize = GroupLib.GetGroupMaxSize()
+		if getGroupMaxSize == 0 then
+			
+			local getDeathState = GameLib.GetPlayerUnit(1):IsDead()
+			local getName = GameLib.GetPlayerUnit(1):GetName()
+			local nGroupIndex = 1
 
-			if getGroupMember ~= nil then
+			ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
+		else
+			for nGroupIndex=1, getGroupMaxSize do
+				local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 
-				local getGroupMemberUnit = GroupLib.GetUnitForGroupMember(nGroupIndex)
+				if getGroupMember ~= nil then
 
-				if getGroupMemberUnit ~= nil then
-					local getDeathState = getGroupMemberUnit:IsDead()
-					local getGroupMemberName = getGroupMember.strCharacterName
+					local getGroupMemberUnit = GroupLib.GetUnitForGroupMember(nGroupIndex)
 
-					if getDeathState then
-						if self.hlp.player[nGroupIndex].dead == false then
+					if getGroupMemberUnit ~= nil then
+						local getDeathState = getGroupMemberUnit:IsDead()
+						local getGroupMemberName = getGroupMember.strCharacterName
+						--local getDeadPlayerName = getGroupMemberUnit:GetName() -- possibly not needed
 
-							-- check if deathless doesnt collide with event's deathless (solves bug when player got teleported dead to instance or uses /stuck)
-							if self.hlp.event["Deathless in the Dungeon"] == 1 then
-								self.hlp.alreadyFailedDeathless = false
-								self:Debug("Deathless in the Dungeon → 1")
-							end
-
-							if self.hlp.event["Deathless in the Dungeon"] == 0 then
-								self.hlp.alreadyFailedDeathless = true
-								self:Debug("Deathless in the Dungeon → 0")
-							end
-
-							local getDeadPlayerName = getGroupMemberUnit:GetName()
-							if self.hlp.alreadyFailedDeathless then
-								local sToChatMin = "Died."
-								self:AddTooltip(getDeadPlayerName, sToChatMin)
-							else
-								local sToChatMin = "Ruined deathless challenge."
-								self:AddTooltip(getDeadPlayerName, sToChatMin)
-
-								local sToChat = string.format("%s just fucked up deathless challenge. RIPgold. :(.", getDeadPlayerName)
-								self:InformOthers(sToChat, false, true)
-
-								--self.hlp.alreadyFailedDeathless = true -- found better solution, to be removed soon
-							end
-
-							self:Debug(getGroupMemberUnit:GetName() .. " is dead.")
-							self.hlp.player[nGroupIndex].dead = true
-							self:CountFails(getGroupMemberName)
-
-						end
-					else
-						if self.hlp.player[nGroupIndex].dead then
-
-							self:Debug(getGroupMemberUnit:GetName() .. " is alive.")
-							self.hlp.player[nGroupIndex].dead = false
-						end
+						ALL:IsPlayerDead(self, getDeathState, getGroupMemberName, nGroupIndex)
 					end
 				end
 			end
 		end
 	end
+end
+
+function ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
+
+	if getDeathState then
+		if self.hlp.player[nGroupIndex].dead == false then
+
+			
+			if self.hlp.event["Deathless in the Dungeon"] == 1 then
+				--self.hlp.alreadyFailedDeathless = false
+				self:Debug("Deathless in the Dungeon → 1")
+			end
+
+			-- check if deathless doesnt collide with event's deathless (solves bug when player got teleported dead to instance but also /stuck problem (counts as ripdeathless))
+			if self.hlp.event["Deathless in the Dungeon"] == 0 then
+				--self:Debug("Deathless in the Dungeon → 0")
+
+				if self.hlp.alreadyFailedDeathless == true then -- warning: cant be if+else, has to be separated
+					local sToChatMin = "Died."
+					self:AddTooltip(getName, sToChatMin)
+				end
+				
+				if self.hlp.alreadyFailedDeathless == false then -- warning: cant be if+else, has to be separated
+					local sToChatMin = "Ruined deathless challenge."
+					self:AddTooltip(getName, sToChatMin)
+
+					local sToChat = string.format("%s just fucked up deathless challenge. RIPgold. :(.", getName)
+					self:InformOthers(sToChat, false, true)
+					self:Debug(getName .. " ruined deathless.")
+					self.hlp.alreadyFailedDeathless = true
+				end
+
+				self:Debug(getName .. " is dead.")
+				self.hlp.player[nGroupIndex].dead = true
+				self:CountFails(getName)
+			end
+		end
+	else
+		if self.hlp.player[nGroupIndex].dead then
+
+			self:Debug(getName .. " is alive.")
+			self.hlp.player[nGroupIndex].dead = false
+		end
+	end
+
 end
 
 -----------------------------------------------------------------------------------------------
@@ -171,11 +190,11 @@ end
 
 function ALL:HowManyFails(self)
 
-	self:InformOthers("So, how many fails did you do this dungeon?", false)
+	self:InformOthers("So, how many fails did you do this dungeon?", false, false)
 
 	for i=1,5 do
 		if self.hlp.player[i].name ~= "" then
-			self:InformOthers(self.hlp.player[i].name .. ": " .. self.hlp.player[i].fails, false)
+			self:InformOthers(self.hlp.player[i].name .. ": " .. self.hlp.player[i].fails, false, false)
 		end
 	end
 
@@ -248,6 +267,7 @@ end
 
 function ALL:checkForBossDeaths(self)
 	if self.hlp.isInDungeon then 
+		--self:Debug("checkForBossDeaths fnc started")
 
 		function doesBossExist()
 		   local isBossDead = GameLib.GetUnitById(self.hlp.isBossDead.ID):IsDead() ~= nil
@@ -260,16 +280,16 @@ function ALL:checkForBossDeaths(self)
 				self.hlp.isBossDead.timer:Stop()
 
 				if self.hlp.isBossDead.name == "Stormtalon" then
-					ALL:HowManyFails(self)
+					self:REDIR_ALL_HowManyFails()
 				end
 				if self.hlp.isBossDead.name == "Spiritmother Selene the Corrupted" then
-					ALL:HowManyFails(self)
+					self:REDIR_ALL_HowManyFails()
 				end
 				if self.hlp.isBossDead.name == "Mordechai Redmoon" then
-					ALL:HowManyFails(self)
+					self:REDIR_ALL_HowManyFails()
 				end
 				if self.hlp.isBossDead.name == "Forgemaster Trogun" then
-					ALL:HowManyFails(self)
+					self:REDIR_ALL_HowManyFails()
 				end
 				if self.hlp.isBossDead.name == "Wrathbone" then
 					--ALL:HowManyFails(self)

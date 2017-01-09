@@ -27,6 +27,7 @@ function STL:OnCombatLogDamage(self, tEventArgs)
 		-- workaround, spell Shock is being casted when Channelers get out of invulnerable shield -> so it proceeds in aoe counting phase
 		if getSpell == "Shock" then
 			self.hlp.WindInvokerChannelerTargetable = true
+			self.hlp.varsForChallengeActive.alreadyAnnounced = false
 		end
 
 	end
@@ -275,35 +276,30 @@ function STL:getCircleDistances(self, unit)
 				missedDistance = Apollo.FormatNumber(missedDistance, 2, true)
 
 				if self.hlp.event["Stormchaser"] == 1 then -- new function, in testing
-
-				--if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor → possibly not happening after self.hlp.WindInvokerChannelerTargetable being true
-					local sToChatMin = string.format("Missed placing AOE by %s m.", missedDistance)
-					self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
-
-					local sToChat = string.format("%s missed placing AOE by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
-					--self:InformOthers(sToChat, true, false)
-					self:InformOthers(sToChat, false, false)
-					--self:Debug(sToChat)
-
-					self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
-				--end
-
+					self.hlp.varsForChallengeActive.unit = unit
+					self.hlp.varsForChallengeActive.missedDistance = missedDistance
+					self.hlp.isChannelerChallengeActive:Start() -- -> leads to STL:checkForChannelerChallengeActive function
 				end
 
 				if self.hlp.event["Stormchaser"] == 0 then -- new function, in testing
 
-				--if missedDistance ~= 9.99 then --workaround for some random happening bug, chance that players will drop circle at this location is minor → possibly not happening after self.hlp.WindInvokerChannelerTargetable being true
-					local sToChatMin = string.format("Missed placing circle by %s m.", missedDistance)
-					self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
+					self.hlp.varsForChallengeActive.alreadyfailed = true
 
-					local sToChat = string.format("%s missed placing circle by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
-					--self:InformOthers(sToChat, true, false)
-					self:InformOthers(sToChat, false, false)
-					--self:Debug(sToChat)
+					--workaround for some random happening bug, chance that players will drop circle at this location is minor → possibly not happening after self.hlp.WindInvokerChannelerTargetable being true
+					local buggingDistance = 17.878676390981
+					if shortestDistance == buggingDistance then
+						self:Debug("buggingDistance !")
+					else
+						local sToChatMin = string.format("Missed placing circle by %s m.", missedDistance)
+						self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
 
-					self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
-				--end
+						local sToChat = string.format("%s missed placing circle by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
+						self:InformOthers(sToChat, true, false)
+						--self:InformOthers(sToChat, false, false)
+						self:Debug(sToChat)
 
+						self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
+					end
 				end
 			end
 		end
@@ -311,6 +307,30 @@ function STL:getCircleDistances(self, unit)
 
 	end
 
+end
+
+function STL:checkForChannelerChallengeActive(self)
+
+	local unit = self.hlp.varsForChallengeActive.unit
+	local missedDistance = self.hlp.varsForChallengeActive.missedDistance
+
+	self:Debug("function checkForChannelerChallengeActive")
+
+	self.hlp.varsForChallengeActive.alreadyfailed = false
+
+	if self.hlp.event["Stormchaser"] == 0 then
+		local sToChatMin = string.format("Missed placing AOE by %s m.", missedDistance)
+		self:AddTooltip(self.hlp.WindInvokerTargetPlayer["name"], sToChatMin)
+
+		local sToChat = string.format("%s missed placing AOE by %s m.", self.hlp.WindInvokerTargetPlayer["name"], missedDistance)
+		self:InformOthers(sToChat, true, false)
+		--self:InformOthers(sToChat, false, false)
+		--self:Debug(sToChat)
+
+		self:CountFails(self.hlp.WindInvokerTargetPlayer["name"])
+
+		self.hlp.varsForChallengeActive.alreadyfailed = true
+	end
 end
 
 function STL:getCircleDistance(self, unit, chanellerID)

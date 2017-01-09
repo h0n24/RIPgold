@@ -137,18 +137,21 @@ function RIPgold:OnDocLoaded()
 		-- self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
 		-- self.updateStatsUI:Stop()
 
-		self.hlp.isBossDead = {
-			["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = ApolloTimer.Create(1, true, "REDIR_checkForBossDeaths", self)
-		}
-		--self.hlp.isBossDead = {}
-		--self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "ALL:checkForBossDeaths(self)", self)
+		--self.hlp.isBossDead = {
+		--	["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = nilw
+		--}
+		self.hlp.isBossDead = {}
+		self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "REDIR_checkForBossDeaths", self)
 		self.hlp.isBossDead.timer:Stop()
-		--self.hlp.isBossDead.ID = 0
-		--self.hlp.isBossDead.name = ""
-		--self.hlp.isBossDead.dead = false
+		self.hlp.isBossDead.ID = 0
+		self.hlp.isBossDead.name = ""
+		self.hlp.isBossDead.dead = false
 
 		self.hlp.doesChannelerExists = ApolloTimer.Create(1, true, "REDIR_checkForChannelerDeaths", self)
 		self.hlp.doesChannelerExists:Stop()
+
+		self.hlp.isChannelerChallengeActive = ApolloTimer.Create(0.2, false, "REDIR_checkForChannelerChallengeActive", self)
+		self.hlp.isChannelerChallengeActive:Stop()
 
 		if self.tSavedVariables == nil then
 
@@ -299,29 +302,59 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 
 		if pcall(IsPeObjectives) then
 
+			self.hlp.event_testing = {}
+
 			-- technically all event points
 			local objectives = peUpdated:GetObjectives()
 
 			for i,obj in pairs(objectives) do
 
-				eventName = obj:GetShortDescription()
-				eventStatus = obj:GetStatus()
+				if obj:GetCategory() == 3 then -- only works for gold medal conected achievements
 
-				self.hlp.event[eventName] = eventStatus
+					eventName = obj:GetShortDescription()
+					eventStatus = obj:GetStatus()
 
-				-- to be deleted soon
-				-- if obj:GetShortDescription() == "Deathless in the Dungeon" then
+					self.hlp.event[eventName] = eventStatus
 
-				-- 	SendVarToRover("deathless", obj)
-				-- 	SendVarToRover("deathless status ", obj:GetStatus())
+					self.hlp.event_testing[eventName] = obj
+		
+					-- to be deleted soon
+					-- if obj:GetShortDescription() == "Deathless in the Dungeon" then
 
-				-- 	-- if obj:GetStatus() == 1 then
-				-- 	-- 	self:Debug("deathless existuje")
-				-- 	-- end
-				-- end
+					-- 	SendVarToRover("deathless", obj)
+					-- 	SendVarToRover("deathless status ", obj:GetStatus())
+
+					-- 	-- if obj:GetStatus() == 1 then
+					-- 	-- 	self:Debug("deathless existuje")
+					-- 	-- end
+					-- end
+				end
 			end
 
-			SendVarToRover("events", self.hlp.event)
+			
+				SendVarToRover("events " .. GameLib.GetGameTime(), self.hlp.event)
+				SendVarToRover("events_testing" .. GameLib.GetGameTime(), self.hlp.event_testing)
+
+			if self.hlp.boss["Blade-Wind the Invoker"] then
+				if self.hlp.event["Stormchaser"] == 0 then 
+					if self.hlp.varsForChallengeActive.alreadyfailed == false then
+						if self.hlp.varsForChallengeActive.alreadyAnnounced == false then
+							local sToChat = string.format("Blade-Wind the Invoker's challenge is lost.")
+							self:InformOthers(sToChat, false, false)
+							self.hlp.varsForChallengeActive.alreadyAnnounced = true
+						end
+					end
+				end
+			end
+
+			if self.hlp.boss["Mordechai Redmoon"] then
+				if self.hlp.event["Stormchaser"] == 0 then 
+					if self.hlp.varsForChallengeActive.alreadyfailed == false then
+						local sToChat = string.format("Mordechai Redmoon wasnt blinded.")
+						self:InformOthers(sToChat, false, false)
+					end
+				end
+			end
 
 			-- test purpose
 
@@ -429,13 +462,17 @@ end
 function RIPgold:OnGroup_Join(var)
 	SendVarToRover("OnGroup_Join "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 end
 
 function RIPgold:OnGroup_Left(var)
 	SendVarToRover("OnGroup_Left "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 
 	-- somehow not working
 end
@@ -443,39 +480,50 @@ end
 function RIPgold:OnGroup_Remove(var)
 	SendVarToRover("OnGroup_Remove "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
-
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 	-- just testing this, will it work?
 end
 
 function RIPgold:OnGroup_Player_Left(var)
 	SendVarToRover("OnGroup_Player_Left "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 end
 
 function RIPgold:OnGroup_Other_Left(var)
 	SendVarToRover("OnGroup_Other_Left "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 end
 
 function RIPgold:OnGroup_Disbanded(var)
 	SendVarToRover("OnGroup_Disbanded "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 end
 
 function RIPgold:OnGroup_Add(var)
 	SendVarToRover("OnGroup_Add "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 end
 
 function RIPgold:OnGroup_Changed(var)
 	SendVarToRover("OnGroup_Changed "..GameLib.GetGameTime(), var)
 
-	UIn:OnBTN_statsClick(self)
+	if self.hlp.isInDungeon == false then
+		UIn:OnBTN_statsClick(self)
+	end
 end
 
 function RIPgold:OnGroup_Updated(var)
@@ -496,7 +544,7 @@ end
 
 function RIPgold:InformOthers(sToChat, setFailedChallenge, overrideGlobalVar)
 
-	if not overrideGlobalVar then
+	if overrideGlobalVar == false then
 		if not self.hlp.alreadyFailedChallenge then
 
 			self:SendToChat(sToChat)
@@ -507,7 +555,8 @@ function RIPgold:InformOthers(sToChat, setFailedChallenge, overrideGlobalVar)
 				self.hlp.alreadyFailedChallenge = false
 			end
 		end
-	else
+	end		
+	if overrideGlobalVar == true then
 		self:SendToChat(sToChat)
 
 		if setFailedChallenge then
@@ -636,6 +685,11 @@ end
 -- Timers redirect
 -----------------------------------------------------------------------------------------------
 
+
+function RIPgold:REDIR_ALL_HowManyFails() -- workaround: because Apollo's lua is out of my understanding 
+	ALL:HowManyFails(self)
+end
+
 function RIPgold:REDIR_checkForBossDeaths()
 	ALL:checkForBossDeaths(self)
 end
@@ -647,6 +701,15 @@ end
 function RIPgold:REDIR_checkForChannelerDeaths()
 	STL:checkForChannelerDeaths(self)
 end
+
+function RIPgold:REDIR_checkForChannelerChallengeActive()
+	STL:checkForChannelerChallengeActive(self)
+end
+
+
+
+
+
 -----------------------------------------------------------------------------------------------
 -- UI Functions (RIPgoldForm Functions)
 -----------------------------------------------------------------------------------------------

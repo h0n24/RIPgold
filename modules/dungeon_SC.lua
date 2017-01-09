@@ -14,6 +14,9 @@ SC.null = setmetatable ({}, {
 -----------------------------------------------------------------------------------------------
 
 function SC:OnCombat_IN(self, unitInCombat)
+	if unitInCombat:GetName() == "Mordechai Redmoon" then
+		self.hlp.BlindedLastGametime = nil
+	end
 end
 
 function SC:OnCombat_OUT(self, unitInCombat)
@@ -51,9 +54,8 @@ function SC:OnCombatLogVitalModifier(self, tEventArgs)
 
 		if pcall(IsTerablinded) then
 
-			if tEventArgs.unitTarget:GetBuffs().arHarmful[1].strTooltip == "Blinded!" then
-
-				local getTarget = tEventArgs.unitTarget:GetName()
+			function IsTerablindedInner()
+				
 				local sToChat = string.format("%s was blinded. Mordechai Redmoon's challenge is lost. Remember to always look out to prevent this!", getTarget)
 
 				self:CountFails(getTarget)
@@ -61,6 +63,30 @@ function SC:OnCombatLogVitalModifier(self, tEventArgs)
 
 				local sToChatMin = string.format("Was blinded.", getSpell)
 				self:AddTooltip(getTarget, sToChatMin)
+			end
+
+			if tEventArgs.unitTarget:GetBuffs().arHarmful[1].strTooltip == "Blinded!" then
+
+				local getTarget = tEventArgs.unitTarget:GetName()
+				local actualGametime = GameLib.GetGameTime()
+
+				if self.hlp.BlindedLastGametime ~= nil then
+					self.hlp.BlindedLastGametime = {}
+				end
+
+				if self.hlp.BlindedLastGametime[getTarget] ~= nil then
+					self.hlp.BlindedLastGametime[getTarget] = actualGametime
+				end
+
+				local difference = actualGametime - self.hlp.BlindedLastGametime[getTarget]
+
+				if difference == 0 then
+					IsTerablindedInner()
+				elseif difference > 10 then
+					IsTerablindedInner()
+				end
+
+				self.hlp.BlindedLastGametime[getTarget] = actualGametime
 			end
 		end
 	end

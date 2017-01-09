@@ -1,5 +1,5 @@
 # RIPgold 0.4 alpha
-RIPgold is a tool that helps how to get gold medals easier, find competent players and overall get better in dungeons in Wildstar MMORPG.
+RIPgold is a tool that helps getting gold medals easier, find competent players to team up with faster and overall get better in dungeons in Wildstar MMORPG.
 
 ## Instalation
 * Copy files as `RIPgold` folder into `%appdata%\NCSoft\Wildstar\addons`

@@ -14,6 +14,7 @@ RIPgold is a tool that helps getting gold medals easier, find competent players 
 ## Credits
 Big thanks to Zod Bain's tips and patiency. 
 
-### Addons credits
+### Addon credits
+* PublicEventTracker, ObjectiveTracker by Carabine
 * FailCheck by Tavikins
 * DungeonMedalsEnhanced by GreenyNeko

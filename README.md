@@ -12,7 +12,7 @@ RIPgold is a tool that helps getting gold medals easier, find competent players 
 
 
 ## Credits
-Big thanks to Zod Bain's tips and patiency. 
+Big thanks to Zod Bain's tips and patiency. Big thanks to all players that helped with development and testing.
 
 ### Addon credits
 * PublicEventTracker, ObjectiveTracker by Carabine

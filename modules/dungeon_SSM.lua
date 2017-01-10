@@ -13,6 +13,24 @@ SSM.null = setmetatable ({}, {
 -- All Bosses
 -----------------------------------------------------------------------------------------------
 
+function SSM:OnPublicEventStatsUpdate(self)
+
+	if self.hlp.isBossDead.name == "Spiritmother Selene the Corrupted" then
+
+		if self.hlp.isBossDead.dead == false then
+
+			if self.hlp.event["Don't Blink"] == 0 then
+				local sToChatMin = "Shadows weren't MOOed or killed."
+				self:AddTooltips(sToChatMin)
+
+				local sToChat = string.format("After everyone got blinded, there was no Shadow of Selene the Corrupted MOOed or killed. Challenge is lost.")
+				self:InformOthers(sToChat, true, false)
+			end
+		end
+	end
+end
+
+
 function SSM:OnCombat_IN(self, unitInCombat)
 
 	if unitInCombat:GetName() == "Rayna Darkspeaker" then
@@ -65,6 +83,9 @@ end
 function SSM:OnCombatLogVitalModifier(self, tEventArgs)
 
 	if tEventArgs.unitCaster:GetName() == "Spiritmother Selene's Echo" then
+
+		-- automatical focus
+		GameLib.GetPlayerUnit(1):SetAlternateTarget(tEventArgs.unitCaster)
 
 		local SeleneHealth = tEventArgs.unitCaster:GetHealth()
 		local SeleneMaxHealth = tEventArgs.unitCaster:GetMaxHealth()
@@ -191,6 +212,9 @@ function SSM:OnUnitCreated(self, unit)
 	
 	local getUnitName = unit:GetName()
 	if getUnitName == "Spiritmother Selene" then
+
+		-- automatically clears focus
+		GameLib.GetPlayerUnit(1):SetAlternateTarget(0)
 
 		local SelenePercentage = self.hlp.SelenePercentage * 100
 

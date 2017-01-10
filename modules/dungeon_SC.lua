@@ -13,9 +13,32 @@ SC.null = setmetatable ({}, {
 -- All Bosses
 -----------------------------------------------------------------------------------------------
 
+function SC:OnPublicEventStatsUpdate(self)
+	if self.hlp.boss["Mordechai Redmoon"] then
+		if self.hlp.event["Like Starin' at the Sun"] == 0 then
+			local actualGametime = GameLib.GetGameTime()
+
+			if self.hlp.lastTimeMordechaiChallengeStatus == nil then
+				self.hlp.lastTimeMordechaiChallengeStatus = GameLib.GetGameTime()
+			end
+
+			local difference = actualGametime - self.hlp.lastTimeMordechaiChallengeStatus - 5 -- 5 second treshold in case someone gets blinded
+
+			if self.hlp.lastTimeMordechaiChallengeStatus > 0 then
+				local sToChatMin = "Mordechai wasn't blinded."
+				self:AddTooltips(sToChatMin)
+
+				local sToChat = string.format("Mordechai Redmoon wasn't blinded by Terraformer. When it says Terraformer Overcharging, you should tank him facing to middle.")
+				self:InformOthers(sToChat, true, false)
+			end
+		end
+	end
+end
+
 function SC:OnCombat_IN(self, unitInCombat)
 	if unitInCombat:GetName() == "Mordechai Redmoon" then
 		self.hlp.BlindedLastGametime = nil
+		self.hlp.lastTimeMordechaiChallengeStatus = GameLib.GetGameTime()
 	end
 end
 

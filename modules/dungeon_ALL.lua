@@ -50,7 +50,7 @@ function ALL:InitializeVars(self)
 		[1] = 0, [2] = 0, [3] = 0, [4] = 0, [5] = 0, 
 	}
 	self.hlp.WindInvokerTargetPlayer = {
-		["name"] = "", ["x"] = 0, ["y"] = 0, ["z"] = 0,
+		["name"] = "", ["name_before"] = "", ["x"] = 0, ["y"] = 0, ["z"] = 0,
 	}
 
 	self.hlp.varsForChallengeActive = {}
@@ -58,6 +58,8 @@ function ALL:InitializeVars(self)
 	self.hlp.WindInvokerDiffs = { 
 		[1] = 0, [2] = 0, [3] = 0, [4] = 0 
 	}
+
+	self.hlp.WindInvokerInvisibleUnitTime = {}
 
 	self.hlp.WindInvokerInvisibleUnitID = 0
 
@@ -246,7 +248,7 @@ function ALL:HowManyFails(self)
 	SendVarToRover("self.rat",self.rat)
 
 	if GroupLib.AmILeader() then
-		ChatSystemLib.Command("/rq")
+		ChatSystemLib.Command("/rq") -- proceeds reQue after end of dungeon if you are a leader
 	end
 
 end
@@ -294,6 +296,8 @@ function ALL:checkForBossDeaths(self)
 				if self.hlp.isBossDead.name == "Wrathbone" then
 					--ALL:HowManyFails(self)
 				end
+
+
 				if self.hlp.isBossDead.name == "Blade-Wind the Invoker" then
 					self.hlp.doesChannelerExists:Stop() --test if it's working
 				end

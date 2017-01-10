@@ -183,7 +183,6 @@ function RIPgold:OnDocLoaded()
 		--self.hlp.isInDungeon = true
 		--self.hlp.boss["Blade-Wind the Invoker"] = true
 
-
 	end
 end
 
@@ -332,29 +331,14 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			end
 
 			
-				SendVarToRover("events " .. GameLib.GetGameTime(), self.hlp.event)
-				SendVarToRover("events_testing" .. GameLib.GetGameTime(), self.hlp.event_testing)
+			--SendVarToRover("events " .. GameLib.GetGameTime(), self.hlp.event)
+			--SendVarToRover("events_testing" .. GameLib.GetGameTime(), self.hlp.event_testing)
 
-			if self.hlp.boss["Blade-Wind the Invoker"] then
-				if self.hlp.event["Stormchaser"] == 0 then 
-					if self.hlp.varsForChallengeActive.alreadyfailed == false then
-						if self.hlp.varsForChallengeActive.alreadyAnnounced == false then
-							local sToChat = string.format("Blade-Wind the Invoker's challenge is lost.")
-							self:InformOthers(sToChat, false, false)
-							self.hlp.varsForChallengeActive.alreadyAnnounced = true
-						end
-					end
-				end
-			end
 
-			if self.hlp.boss["Mordechai Redmoon"] then
-				if self.hlp.event["Stormchaser"] == 0 then 
-					if self.hlp.varsForChallengeActive.alreadyfailed == false then
-						local sToChat = string.format("Mordechai Redmoon wasnt blinded.")
-						self:InformOthers(sToChat, false, false)
-					end
-				end
-			end
+			STL:OnPublicEventStatsUpdate(self)
+			SC:OnPublicEventStatsUpdate(self)
+			SSM:OnPublicEventStatsUpdate(self)
+			KV:OnPublicEventStatsUpdate(self)
 
 			-- test purpose
 
@@ -784,6 +768,10 @@ end
 
 function RIPgold:onBOX_announceChange(wndControl)
 	UIn:onBOX_announceChange(self, wndControl)
+end
+
+function RIPgold:onBOX_announceEscape()
+	UIn:UpdateAnnounceOnEscape(self)
 end
 
 function RIPgold:onCOMB_roleClick()

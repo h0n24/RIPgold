@@ -184,9 +184,10 @@ function UIn:UpdateAnnounce(self)
 	self.set.CHCK_PLZ_tank = self.wndMain:FindChild("CHCK_PLZ_tank"):IsChecked()
 
 
-	self.hlp.lastAnnouncingText = self.wndMain:FindChild("BOX_announce"):GetText()
+	self.hlp.lastAnnouncingTextCustom = self.hlp.announcingText
+	self.hlp.announcingTextCustom = self.wndMain:FindChild("BOX_announce"):GetText()
 
-	local announcingText = "/n " --longest: /n LFxM for vets, 10k+ dps or 6k+ heal or tanking class
+	local announcingText = "/s " --longest: /n LFxM for vets, 10k+ dps or 6k+ heal or tanking class
 
 	local memberCount = GroupLib.GetMemberCount()
 	local missingMembers = 0
@@ -203,11 +204,32 @@ function UIn:UpdateAnnounce(self)
 		announcingText = announcingText .. "full"
 	end
 
-	if self.hlp.lastAnnouncingText ~= announcingText then
-		self:Debug("uaaa")
+	self.hlp.lastAnnouncingTextGen = self.hlp.announcingTextGen
+	self.hlp.announcingTextGen = announcingText
+
+	if self.hlp.announcingTextCustom ~= self.hlp.announcingTextGen then
+
+		local textDiffLen = string.len(self.hlp.lastAnnouncingTextGen) + 1 --has to be +1!
+		local cutText = string.sub(self.hlp.announcingTextCustom, textDiffLen)
+
+		self:Debug(cutText)
+		announcingText = announcingText .. cutText
+		self.hlp.announcingTextGen = announcingText
 	end
 
 	self.wndMain:FindChild("BOX_announce"):SetText(announcingText)
+	self.wndMain:FindChild("BOX_announce"):SetPrompt(announcingText)
+
+	-- testing
+
+	self.wndMain:FindChild("BAR_announce"):SetProgress(0.5)
+end
+
+function UIn:UpdateAnnounceOnEscape(self)
+	-- if user deletes all text, its returned
+	if self.wndMain:FindChild("BOX_announce"):GetText() == "" then
+		self.wndMain:FindChild("BOX_announce"):SetText(self.hlp.announcingTextGen)
+	end
 end
 
 function UIn:UpdateAnnounceTextBase(self, announcingText, missingMembers)

@@ -222,7 +222,7 @@ function UIn:UpdateAnnounce(self)
 
 	-- testing
 
-	self.wndMain:FindChild("BAR_announce"):SetProgress(0.5)
+	self.wndMain:FindChild("BAR_announce"):SetProgress(0.4)
 end
 
 function UIn:UpdateAnnounceOnEscape(self)

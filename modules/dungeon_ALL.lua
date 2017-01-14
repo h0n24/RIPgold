@@ -192,11 +192,17 @@ end
 
 function ALL:HowManyFails(self)
 
-	self:InformOthers("So, how many fails did you do this dungeon?", false, false)
+	local totalfails = self.hlp.player[1].fails + self.hlp.player[2].fails + self.hlp.player[3].fails + self.hlp.player[4].fails + self.hlp.player[5].fails
 
-	for i=1,5 do
-		if self.hlp.player[i].name ~= "" then
-			self:InformOthers(self.hlp.player[i].name .. ": " .. self.hlp.player[i].fails, false, false)
+	if totalfails == 0 then
+		self:InformOthers("No mistakes. Well done!", false, false)
+	else
+		self:InformOthers("So, how many fails did you do this dungeon?", false, false)
+
+		for i=1,5 do
+			if self.hlp.player[i].name ~= "" then
+				self:InformOthers(self.hlp.player[i].name .. ": " .. self.hlp.player[i].fails, false, false)
+			end
 		end
 	end
 

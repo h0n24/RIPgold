@@ -37,13 +37,14 @@ function UIn:OnBTN_statsClick(self)
 	self.wndMain:FindChild("COMB_role"):AddItem("rating", "test", nil)
 	self.wndMain:FindChild("COMB_role"):AddItem("k+ dps", "test", nil)
 	self.wndMain:FindChild("COMB_role"):AddItem("ilvl", "test", nil)
+	self.wndMain:FindChild("COMB_role"):AddItem("primelvl", "test", nil)
 
 	if not self.set.COMB_roleIndex then
 		-- set original values
 		self.wndMain:FindChild("COMB_role"):SelectItemByIndex(0) -- original pick: anyone
 		self.wndMain:FindChild("BOX_BG_targetPerformance"):Show(false)
 		self.set.BOX_announce = { 
-			[1] = "10", [2] = "10", [3] = "100",
+			[1] = "10", [2] = "10", [3] = "100", [4] = "0",
 		}
 
 	else
@@ -187,7 +188,7 @@ function UIn:UpdateAnnounce(self)
 	self.hlp.lastAnnouncingTextCustom = self.hlp.announcingText
 	self.hlp.announcingTextCustom = self.wndMain:FindChild("BOX_announce"):GetText()
 
-	local announcingText = "/s " --longest: /n LFxM for vets, 10k+ dps or 6k+ heal or tanking class
+	local announcingText = "/n " --longest: /n LFxM for vets, 10k+ dps or 6k+ heal or tanking class
 
 	local memberCount = GroupLib.GetMemberCount()
 	local missingMembers = 0
@@ -201,7 +202,7 @@ function UIn:UpdateAnnounce(self)
 		announcingText = UIn:UpdateAnnounceTextBase(self, announcingText,missingMembers)
 
 	else
-		announcingText = announcingText .. "full"
+		announcingText = announcingText .. "full, thx"
 	end
 
 	self.hlp.lastAnnouncingTextGen = self.hlp.announcingTextGen
@@ -234,12 +235,20 @@ end
 
 function UIn:UpdateAnnounceTextBase(self, announcingText, missingMembers)
 
-	announcingText = announcingText .. "LF"..missingMembers.."M for vets"
+	announcingText = announcingText .. "LF"..missingMembers.."M for "
+
+	if self.set.COMB_roleIndex == 4 then
+		announcingText = announcingText .. "primes"
+	else
+		announcingText = announcingText .. "vets"
+	end
 
 	if self.set.COMB_roleIndex == 1 then
 		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "RR"  -- example: 10RR
 	elseif self.set.COMB_roleIndex == 3 then
 		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "+ ilvl" -- example: 100+ ilvl
+	elseif self.set.COMB_roleIndex == 4 then
+		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "+ primelvl" -- example: 10+ prime
 	end
 
 	if self.set.CHCK_PLZ_dps == true or self.set.CHCK_PLZ_heal == true or self.set.CHCK_PLZ_tank == true then
@@ -259,7 +268,11 @@ function UIn:UpdateAnnounceTextBase(self, announcingText, missingMembers)
 
 	if self.set.CHCK_PLZ_dps == true and self.set.CHCK_PLZ_tank == true then
 		if self.set.CHCK_PLZ_heal == false then
-			announcingText = announcingText .. " or "
+			if missingMembers == 1 then
+				announcingText = announcingText .. " and "
+			else
+				announcingText = announcingText .. " or "
+			end
 		end
 	end
 
@@ -275,7 +288,7 @@ function UIn:UpdateAnnounceTextBase(self, announcingText, missingMembers)
 	end
 
 	if self.set.CHCK_PLZ_tank == true then
-		announcingText = announcingText .. "tanking class"
+		announcingText = announcingText .. "tank"
 	end
 
 	return announcingText
@@ -324,7 +337,7 @@ function UIn:onBTN_announceClick(self)
 			ChatSystemLib.Command("/eval GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)")
 			--GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
 
-			-- workaround: because normal one doesnt work 100%
+			-- workaround: because normal one doesnt work 100% even with /eval.. rip
 			if GroupLib.GetJoinRequestMethod() ~= GroupLib.InvitationMethod.Open then
 				GroupLib.SetJoinRequestMethod(GroupLib.InvitationMethod.Open)
 				
@@ -338,7 +351,7 @@ function UIn:onBTN_announceClick(self)
 			GroupLib.SetReferralMethod(GroupLib.InvitationMethod.Open)
 		end
 
-		if announce == "full" then -- need rework if the reQue addon is installed
+		if announce == "/n full, thx" then -- need rework if the reQue addon is installed
 			ChatSystemLib.Command("/rq")
 		end
 	end

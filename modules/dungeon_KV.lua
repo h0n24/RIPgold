@@ -14,14 +14,17 @@ KV.null = setmetatable ({}, {
 -----------------------------------------------------------------------------------------------
 
 function KV:OnPublicEventStatsUpdate(self)
-	if self.hlp.boss["Forgemaster Trogun"] then
-		if self.hlp.event["Trogun Man!"] == 0 then
 
-			local sToChatMin = "Forgemaster got stacks."
-			self:AddTooltips(sToChatMin)
+	if self.hlp.isBossDead.name == "Forgemaster Trogun" then
+		if self.hlp.isBossDead.dead == false then
+			if self.hlp.event["Trogun Man!"] == 0 then
 
-			local sToChat = string.format("Forgemaster got stacks of Primal Fire. The challenge is lost.")
-			self:InformOthers(sToChat, true, false)
+				local sToChatMin = "Forgemaster got stacks."
+				self:AddTooltips(sToChatMin)
+
+				local sToChat = string.format("Forgemaster got stacks of Primal Fire. The challenge is lost.")
+				self:InformOthers(sToChat, true, false)
+			end
 		end
 	end
 end

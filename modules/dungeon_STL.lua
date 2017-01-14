@@ -20,12 +20,14 @@ end
 function STL:OnPublicEventStatsUpdate(self)
 	if self.hlp.boss["Blade-Wind the Invoker"] then
 		if self.hlp.event["Stormchaser"] == 0 then 
-			if self.hlp.varsForChallengeActive.alreadyfailed == false then
-				--if self.hlp.varsForChallengeActive.alreadyAnnounced == false then
-					local sToChat = string.format("Blade-Wind the Invoker's challenge is lost.")
-					-- self:InformOthers(sToChat, true, false)
-					--self.hlp.varsForChallengeActive.alreadyAnnounced = true
-				--end
+			if self.hlp.varsForChallengeActive ~= nil
+				if self.hlp.varsForChallengeActive.alreadyfailed == false then
+					--if self.hlp.varsForChallengeActive.alreadyAnnounced == false then
+						local sToChat = string.format("Blade-Wind the Invoker's challenge is lost.")
+						-- self:InformOthers(sToChat, true, false)
+						--self.hlp.varsForChallengeActive.alreadyAnnounced = true
+					--end
+				end
 			end
 		end
 	end

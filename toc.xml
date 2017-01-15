@@ -5,6 +5,7 @@
     <Script Name="modules\dungeon_KV.lua"/>
     <Script Name="modules\dungeon_SSM.lua"/>
     <Script Name="modules\dungeon_SC.lua"/>
+    <Script Name="modules\dungeon_PA.lua"/>
 
     <Script Name="modules\ui_stats.lua"/>
     <Script Name="modules\ui_rating.lua"/>

@@ -9,6 +9,10 @@ SC.null = setmetatable ({}, {
   __toinn = function () return "null" end
 })
 
+-- STATUS: 100% complete
+-- What needs more testing: Like Starin at the Sun (just few tests done)
+-- What needs more testing: Bosun Octog
+
 -----------------------------------------------------------------------------------------------
 -- All Bosses
 -----------------------------------------------------------------------------------------------
@@ -28,7 +32,7 @@ function SC:OnPublicEventStatsUpdate(self)
 				local sToChatMin = "Mordechai wasn't blinded."
 				self:AddTooltips(sToChatMin)
 
-				local sToChat = string.format("Mordechai Redmoon wasn't blinded by Terraformer. When it says Terraformer Overcharging, you should tank him facing to middle.")
+				local sToChat = string.format("Mordechai Redmoon wasn't blinded by Terraformer. When it says Terraformer Overcharging, Mordechai should be facing the middle.")
 				self:InformOthers(sToChat, true, false)
 			end
 		end
@@ -93,7 +97,7 @@ function SC:OnCombatLogVitalModifier(self, tEventArgs)
 				local getTarget = tEventArgs.unitTarget:GetName()
 				local actualGametime = GameLib.GetGameTime()
 
-				if self.hlp.BlindedLastGametime ~= nil then
+				if self.hlp.BlindedLastGametime == nil then
 					self.hlp.BlindedLastGametime = {}
 				end
 
@@ -144,6 +148,7 @@ function SC:OnCombatLogDamage(self, tEventArgs)
 		self:CountFails(getTarget)
 	end
 
+	-- Most likely is not working
 	if getTarget == "Bosun Octog" then
 
 		function IsBosunBroken()
@@ -152,12 +157,13 @@ function SC:OnCombatLogDamage(self, tEventArgs)
 
 		if pcall(IsBosunBroken) then
 			if tEventArgs.unitTarget:GetBuffs().arHarmful[1].splEffect:GetName() == "Broken Armor" then
-				self.hlp.OctogStacks = getBossBuffs.arHarmful[1].nCount
-				self:Debug("Octog have stacks: " .. self.hlp.OctogStacks)
+				self.hlp.OctogStacks = tEventArgs.unitTarget:GetBuffs().arHarmful[1].nCount
+				self:Debug("××× Octog have stacks: " .. self.hlp.OctogStacks)
 			end
 		end
 	end
 
+	-- Register stacks of Broken Armor on Bosun Octog delivering damage (will not register if he catches orb and then he got killed because for this function to hapen he has to do some spell)
 	if getCaster == "Bosun Octog" then
 
 		function IsBosunBroken()
@@ -166,7 +172,7 @@ function SC:OnCombatLogDamage(self, tEventArgs)
 
 		if pcall(IsBosunBroken) then
 			if tEventArgs.unitCaster:GetBuffs().arHarmful[1].splEffect:GetName() == "Broken Armor" then
-				self.hlp.OctogStacks = getBossBuffs.arHarmful[1].nCount
+				self.hlp.OctogStacks = tEventArgs.unitTarget:GetBuffs().arHarmful[1].nCount
 				self:Debug("Octog have stacks: " .. self.hlp.OctogStacks)
 			end
 		end

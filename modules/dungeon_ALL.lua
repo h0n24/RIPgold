@@ -63,7 +63,9 @@ function ALL:InitializeVars(self)
 
 	self.hlp.WindInvokerInvisibleUnitID = 0
 
-	self.hlp.WindInvokerLastGametime = GameLib.GetGameTime() 
+	self.hlp.WindInvokerLastGametime = GameLib.GetGameTime()
+
+	self.hlp.lastGametimeFailed = {}
 
 end
 
@@ -146,15 +148,8 @@ function ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
 	if getDeathState then
 		if self.hlp.player[nGroupIndex].dead == false then
 
-			
-			if self.hlp.event["Deathless in the Dungeon"] == 1 then
-				--self.hlp.alreadyFailedDeathless = false
-				self:Debug("Deathless in the Dungeon → 1")
-			end
-
 			-- check if deathless doesnt collide with event's deathless (solves bug when player got teleported dead to instance but also /stuck problem (counts as ripdeathless))
 			if self.hlp.event["Deathless in the Dungeon"] == 0 then
-				--self:Debug("Deathless in the Dungeon → 0")
 
 				if self.hlp.alreadyFailedDeathless == true then -- warning: cant be if+else, has to be separated
 					local sToChatMin = "Died."
@@ -303,7 +298,6 @@ function ALL:checkForBossDeaths(self)
 					--ALL:HowManyFails(self)
 				end
 
-
 				if self.hlp.isBossDead.name == "Blade-Wind the Invoker" then
 					self.hlp.doesChannelerExists:Stop() --test if it's working
 				end
@@ -317,6 +311,11 @@ function ALL:checkForBossDeaths(self)
 
 						self:AddFails()
 					end
+				end
+
+				-- starts timer that checks if party forgot to pick Spirit-Relic of Blood
+				if self.hlp.isBossDead.name == "Deadringer Shallaos" then
+					self.hlp.doesRelicBloodExist:Start()
 				end
 
 				self:Debug(self.hlp.isBossDead.name .. " is dead.")

@@ -1,17 +1,21 @@
 -----------------------------------------------------------------------------------------------
 -- Client Lua Script for RIPgold
 -- Copyright (c) NCsoft. All rights reserved
+--
+-- Made by Aki @Jabbit, feel free to report bugs at https://github.com/h0n24/RIPgold
 -----------------------------------------------------------------------------------------------
 
--- todo (no clue how to): check if mordechai is being blinded
--- todo (no clue how to): last boss in ssm
--- todo: SSM: reminder after 15s that you forgot to pick first relic in SSM, unit name: Spirit Relic of Blood
--- todo: some spells are counting twice or more per second, make a timer for every spell to add one failpoint once per two seconds (bugging bosses -> mordechai)
--- todo: SSM: write whisp message to people who are dead after 2s after spirit relics being placed "you can rezz up"
+-- todo: iccom: at making group, share&update player's rating, number of dungeons, ilvl and heroism
+-- todo: make announcing more simpler → include repeating announcing to normal announcing + turn of in settings
+-- todo: use custom messages from settings
+-- todo: disband doesnt grants rating to players, same for leaver
+-- todo: show ilvl and heroism
 
--- todo: iccom: at making group, share player's rating (potentially ilvl and max prime level)
-
--- todo: make announcing more simpler -> include repeating announcing to normal announcing
+-- things to ask Zod: do i need to use pcalls like i do? can it be done better way?
+-- things to ask Zod: can "REDIRECT_nameoftimer" be done better?
+-- things to ask Zod: how to solve group join and group leave efficiently?
+-- things to ask Zod: do i need to transfer self variable when comunicating with modules like i do? example: KV:OnPublicEventStatsUpdate(self)
+-- things to ask Zod: how effectively include calling reQue addon after group gets full or after boss in dungeon gets killed (momentarily done with /rq command)
 
 require "Apollo"
 require "Window"
@@ -25,10 +29,11 @@ local RIPgold = {}
 
 -- modules for specific dungeons
 local ALL = Apollo.GetPackage("Module:ALL-1.0").tPackage
+local PA = Apollo.GetPackage("Module:PA-1.0").tPackage
 local STL = Apollo.GetPackage("Module:STL-1.0").tPackage
 local KV = Apollo.GetPackage("Module:KV-1.0").tPackage
-local SSM = Apollo.GetPackage("Module:SSM-1.0").tPackage
 local SC = Apollo.GetPackage("Module:SC-1.0").tPackage
+local SSM = Apollo.GetPackage("Module:SSM-1.0").tPackage
 
 -- modules for UI
 local UIn = Apollo.GetPackage("Module:UIn-1.0").tPackage
@@ -91,15 +96,12 @@ function RIPgold:OnDocLoaded()
 		end
 		
 	    self.wndMain:Show(false, true)
-
-		-- if the xmlDoc is no longer needed, you should set it to nil
-		-- self.xmlDoc = nil
 		
 		-- Register handlers for events, slash commands and timer, etc.
-		-- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
 		Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded",  "OnInterfaceMenuListHasLoaded", self)
 		Apollo.RegisterEventHandler("ToggleRIPgoldUI", "OnRIPgoldOn", self)
 
+		-- slash commands
 		Apollo.RegisterSlashCommand("rip", "OnRIPgoldOn", self)
 
 		-- Do additional Addon initialization here
@@ -116,7 +118,7 @@ function RIPgold:OnDocLoaded()
 
 		Apollo.RegisterEventHandler("ChangeWorld", "OnWorldChange", self)
 
-		-- testing purposes
+		-- testing purposes (group related events) → todo: simplify
 		Apollo.RegisterEventHandler("Group_Join", "OnGroup_Join", self)
 		Apollo.RegisterEventHandler("Group_Left", "OnGroup_Left", self)
 		Apollo.RegisterEventHandler("Group_Player_Left", "OnGroup_Player_Left", self)
@@ -127,15 +129,15 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterEventHandler("Group_Updated", "OnGroup_Updated", self)
 		Apollo.RegisterEventHandler("Group_Remove", "OnGroup_Remove", self)
 
-		
-
-		-- first: seconds how often is repeated, second if its repeating
+		-- ApolloTimer variables → first says in seconds how often is repeated, second if its repeating
 		self.checkDeadState = ApolloTimer.Create(1, true, "REDIR_checkForPlayerDeaths", self) 
 		self.checkDeadState:Stop()
 
 		-- updating ui every second when opened → already made new fuction, updated on fails
 		-- self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
 		-- self.updateStatsUI:Stop()
+
+
 
 		--self.hlp.isBossDead = {
 		--	["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = nilw
@@ -152,6 +154,9 @@ function RIPgold:OnDocLoaded()
 
 		self.hlp.isChannelerChallengeActive = ApolloTimer.Create(0.2, false, "REDIR_checkForChannelerChallengeActive", self)
 		self.hlp.isChannelerChallengeActive:Stop()
+
+		self.hlp.doesRelicBloodExist = ApolloTimer.Create(30, false, "REDIR_checkForRelicOfBlood", self)
+		self.hlp.doesRelicBloodExist:Stop()
 
 		if self.tSavedVariables == nil then
 
@@ -182,6 +187,8 @@ function RIPgold:OnDocLoaded()
 		--- testing purposes
 		--self.hlp.isInDungeon = true
 		--self.hlp.boss["Blade-Wind the Invoker"] = true
+		--self.hlp.lastRelic = nil
+		--self.hlp.thisRelic = nil
 
 	end
 end
@@ -253,7 +260,7 @@ function RIPgold:OnPublicEventStart()
 
 				UIn:OnBTN_statsClick(self)
 
-				SendVarToRover("self", self)
+				--SendVarToRover("self", self)
 				
 				return true
 			end
@@ -262,18 +269,13 @@ function RIPgold:OnPublicEventStart()
 end
 
 function RIPgold:OnPublicEventStatsUpdate(peUpdated)
-
 	if self.hlp.isInDungeon then --if not in raid → if in dungeon
-
-		--local timeinfo = string.format("OnPublicEventStatsUpdate base - %s", GameLib.GetGameTime())
-		--SendVarToRover(timeinfo, peUpdated)
 
 		function IsPeUpdated()
 		   local getPeUpdated = peUpdated:GetEventType() ~= nil
 		end
 
 		if pcall(IsPeUpdated) then
-
 			if peUpdated:GetEventType() ~= PublicEvent.PublicEventType_Dungeon then
 				return
 			end
@@ -287,12 +289,9 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			end
 
 			--SendVarToRover("self", self)
-
 			-- code connected with event points
-
 				--local timeinfo = string.format("OnPublicEventStatsUpdate - %s", GameLib.GetGameTime())
 				--SendVarToRover(timeinfo, peUpdated)
-
 		end
 
 		function IsPeObjectives()
@@ -300,8 +299,7 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 		end
 
 		if pcall(IsPeObjectives) then
-
-			self.hlp.event_testing = {}
+			self.hlp.event_testing = {} -- testing purposes
 
 			-- technically all event points
 			local objectives = peUpdated:GetObjectives()
@@ -309,43 +307,27 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			for i,obj in pairs(objectives) do
 
 				if obj:GetCategory() == 3 then -- only works for gold medal conected achievements
-
 					eventName = obj:GetShortDescription()
 					eventStatus = obj:GetStatus()
 
 					self.hlp.event[eventName] = eventStatus
+				end
+				-- testing purposes (needs massive performance, so care!)
+				--self.hlp.event_testing[eventName] = obj
 
-					self.hlp.event_testing[eventName] = obj
-		
-					-- to be deleted soon
-					-- if obj:GetShortDescription() == "Deathless in the Dungeon" then
-
-					-- 	SendVarToRover("deathless", obj)
-					-- 	SendVarToRover("deathless status ", obj:GetStatus())
-
-					-- 	-- if obj:GetStatus() == 1 then
-					-- 	-- 	self:Debug("deathless existuje")
-					-- 	-- end
-					-- end
+				-- specifically for collecting torine relics
+				if obj:GetShortDescription() == "Collect Torine Spirit-Relics" then
+					self.hlp.TorineRelicsCount = obj:GetCount()
 				end
 			end
 
-			
 			--SendVarToRover("events " .. GameLib.GetGameTime(), self.hlp.event)
 			--SendVarToRover("events_testing" .. GameLib.GetGameTime(), self.hlp.event_testing)
-
-
+			PA:OnPublicEventStatsUpdate(self)
 			STL:OnPublicEventStatsUpdate(self)
+			KV:OnPublicEventStatsUpdate(self)
 			SC:OnPublicEventStatsUpdate(self)
 			SSM:OnPublicEventStatsUpdate(self)
-			KV:OnPublicEventStatsUpdate(self)
-
-			-- test purpose
-
-			--local getObjectives = peUpdated:GetObjectives()
-			--local timeinfo = string.format("getObjectives - %s", GameLib.GetGameTime())
-			--SendVarToRover(timeinfo, getObjectives)
-
 		end
 	end -- if not in raid
 end
@@ -360,7 +342,6 @@ function RIPgold:OnWorldChange()
 end
 
 function RIPgold:OnCombat(unitInCombat, bInCombat)
-
 	if self.hlp.isInDungeon then 
 		local unitInCombatName = unitInCombat:GetName()
 
@@ -373,16 +354,20 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 					self:Debug(bossName .. " alive.")
 				end
 			end
-
+			PA:OnCombat_IN(self, unitInCombat)
+			STL:OnCombat_IN(self, unitInCombat)
 			KV:OnCombat_IN(self, unitInCombat)
+			SC:OnCombat_IN(self, unitInCombat)
 			SSM:OnCombat_IN(self, unitInCombat)
 		end
 
 		-- proceeds on leaving combat
 		if not bInCombat then
+			PA:OnCombat_OUT(self, unitInCombat)
+			STL:OnCombat_OUT(self, unitInCombat)
 			KV:OnCombat_OUT(self, unitInCombat)
+			SC:OnCombat_OUT(self, unitInCombat)
 			SSM:OnCombat_OUT(self, unitInCombat)
-			SC:OnCombat_OUT(self, unitInCombat)		
 
 			-- boss leaving combat
 			for bossName,bossState in pairs(self.hlp.boss) do
@@ -397,11 +382,12 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 end
 
 function RIPgold:OnCombatLogVitalModifier(tEventArgs)
-
-	if self.hlp.isInDungeon then 
-		SSM:OnCombatLogVitalModifier(self, tEventArgs)
+	if self.hlp.isInDungeon then
+		PA:OnCombatLogVitalModifier(self, tEventArgs)
+		STL:OnCombatLogVitalModifier(self, tEventArgs)
 		KV:OnCombatLogVitalModifier(self, tEventArgs)
 		SC:OnCombatLogVitalModifier(self, tEventArgs)
+		SSM:OnCombatLogVitalModifier(self, tEventArgs)
 	end
 end
 
@@ -409,15 +395,21 @@ function RIPgold:OnUnitCreated(unit)
 
 	STL:OnUnitCreatedBeforeEnteringDungeon(self, unit) -- ! has to be outside hlp.isInDungeon
 	if self.hlp.isInDungeon then
+		PA:OnUnitCreated(self, unit)
 		STL:OnUnitCreated(self, unit)
+		KV:OnUnitCreated(self, unit)
+		SC:OnUnitCreated(self, unit)
 		SSM:OnUnitCreated(self, unit)
 	end
 end
 
 function RIPgold:OnUnitDestroyed(unit)
-
 	if self.hlp.isInDungeon then
+		PA:OnUnitDestroyed(self, unit)
 		STL:OnUnitDestroyed(self, unit)
+		KV:OnUnitDestroyed(self, unit)
+		SC:OnUnitDestroyed(self, unit)
+		SSM:OnUnitDestroyed(self, unit)
 	end
 end
 
@@ -432,10 +424,11 @@ function RIPgold:OnCombatLogDamage(tEventArgs)
 
 			if tEventArgs.unitTarget:IsInYourGroup() or tEventArgs.unitTarget:IsThePlayer() then -- if target is in your party
 
-				SC:OnCombatLogDamage(self, tEventArgs)
+				PA:OnCombatLogDamage(self, tEventArgs)
 				STL:OnCombatLogDamage(self, tEventArgs)
-				SSM:OnCombatLogDamage(self, tEventArgs)
 				KV:OnCombatLogDamage(self, tEventArgs)
+				SC:OnCombatLogDamage(self, tEventArgs)
+				SSM:OnCombatLogDamage(self, tEventArgs)
 			end
 		end
 	end
@@ -515,7 +508,7 @@ function RIPgold:OnGroup_Updated(var)
 
 	--UIn:OnBTN_statsClick(self)
 
-	-- cycles virtually every sec
+	-- cycles virtually every sec which is meh event
 end
 
 
@@ -690,6 +683,9 @@ function RIPgold:REDIR_checkForChannelerChallengeActive()
 	STL:checkForChannelerChallengeActive(self)
 end
 
+function RIPgold:REDIR_checkForRelicOfBlood()
+	SSM:checkForRelicOfBlood(self)
+end
 
 
 

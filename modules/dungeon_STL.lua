@@ -9,6 +9,10 @@ STL.null = setmetatable ({}, {
   __toinn = function () return "null" end
 })
 
+-- STATUS: 90% complete
+-- Missing: second boss adds kill in 15 seconds
+-- What needs more testing: Not sure first boss works every time, not sure about the right distance of shield of Channelers
+
 -----------------------------------------------------------------------------------------------
 -- All Bosses
 -----------------------------------------------------------------------------------------------
@@ -41,6 +45,10 @@ function STL:OnCombat_IN(self, unitInCombat)
 end
 
 function STL:OnCombat_OUT(self, unitInCombat)
+
+end
+
+function STL:OnCombatLogVitalModifier(self, tEventArgs)
 
 end
 
@@ -143,18 +151,19 @@ function STL:OnUnitDestroyed(self, unit)
 	
 	if self.hlp.boss["Blade-Wind the Invoker"] then
 		if unit:GetName() == "Hostile Invisible Unit for Fields (0 hit radius)" then
-			--SendVarToRover("unit destroyed ".. GameLib.GetGameTime(), unit)
-			local testvar = GameLib.GetGameTime() - self.hlp.WindInvokerInvisibleUnitTime[unit:GetId()]
-			--
+			local getWindInvokerInvisibleUnitTime = self.hlp.WindInvokerInvisibleUnitTime[unit:GetId()]
+			if getWindInvokerInvisibleUnitTime ~= nil then
+				
+				local timeDifference = GameLib.GetGameTime() - getWindInvokerInvisibleUnitTime
+				if timeDifference > 3 then
+					--self:Debug(GameLib.GetGameTime()) -- some random occuring unit, possibly lightning animation from boss
+				elseif timeDifference > 1.4 then
+					--SendVarToRover("unit treshold ".. GameLib.GetGameTime(), unit:GetId())
 
-			if testvar > 3 then
-				self:Debug(GameLib.GetGameTime()) -- some random occuring unit, possibly lightning animation from boss
-			elseif testvar > 1.4 then
-				SendVarToRover("unit treshold ".. GameLib.GetGameTime(), unit:GetId())
-
-				local unitID = unit:GetId()
-				if unitID == self.hlp.WindInvokerInvisibleUnitID then
-					STL:getCircleDistances(self, unit)
+					local unitID = unit:GetId()
+					if unitID == self.hlp.WindInvokerInvisibleUnitID then
+						STL:getCircleDistances(self, unit)
+					end
 				end
 			end
 		end
@@ -318,7 +327,8 @@ function STL:getCircleDistances(self, unit)
 		local actualGametime = GameLib.GetGameTime()
 		if self.hlp.WindInvokerLastGametime ~= actualGametime then
 
-			local channelerRadius = 7.89 -- the best constant I've found after numbers of tries, still only guess, not real constant
+			--local channelerRadius = 7.89 -- the best constant I've found after numbers of tries, still only guess, not real constant
+			local channelerRadius = 8.17 -- the best constant I've found after numbers of tries, still only guess, not real constant
 			if shortestDistance > channelerRadius then
 				local missedDistance = shortestDistance - channelerRadius
 

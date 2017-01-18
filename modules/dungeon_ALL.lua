@@ -124,10 +124,17 @@ function ALL:getTooltipStats(self)
 			self.hlp.player[1].hero = Apollo.FormatNumber(GameLib.GetPlayerUnit(1):GetHeroism() or 0, 0, true)
 		end
 		-- get dungeons completed stat
-		local getPlayerName = GameLib.GetPlayerUnit(1):GetName()
-		if self.rat[getPlayerName].dungs ~= nil then
-			self.hlp.player[1].dungs = self.rat[getPlayerName].dungs
+		function GetPlayerName()
+		   local get = GameLib.GetPlayerUnit(1):GetName() ~= nil
 		end
+		if pcall(GetPlayerName) then
+			local playerName = GameLib.GetPlayerUnit(1):GetName()
+			if self.rat[playerName].dungs ~= nil then
+				self.hlp.player[1].dungs = self.rat[playerName].dungs
+			end
+		end
+
+
 	else
 		for nGroupIndex=1,self.get.GroupMaxSize do 
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
@@ -147,9 +154,11 @@ function ALL:getTooltipStats(self)
 						self.hlp.player[nGroupIndex].ilvl = Apollo.FormatNumber(GroupLib.GetUnitForGroupMember(nGroupIndex):GetEffectiveItemLevel() or 0, 0, true)
 					end
 
-					if self.rat[self.hlp.player[nGroupIndex].name].ilvl ~= nil then
-						if self.rat[self.hlp.player[nGroupIndex].name].ilvl > self.hlp.player[nGroupIndex].ilvl then
-							self.hlp.player[nGroupIndex].ilvl = self.rat[self.hlp.player[nGroupIndex].name].ilvl
+					if self.rat[getPlayersName] ~= nil then
+						if self.rat[getPlayersName].ilvl ~= nil then
+							if tonumber(self.rat[getPlayersName].ilvl) > tonumber(self.hlp.player[nGroupIndex].ilvl) then
+								self.hlp.player[nGroupIndex].ilvl = self.rat[getPlayersName].ilvl
+							end
 						end
 					end
 				else
@@ -172,11 +181,13 @@ function ALL:getTooltipStats(self)
 						self.hlp.player[nGroupIndex].hero = Apollo.FormatNumber(GroupLib.GetUnitForGroupMember(nGroupIndex):GetHeroism() or 0, 0, true)
 					end
 
-					if self.rat[self.hlp.player[nGroupIndex].name].hero ~= nil then
-						if self.rat[self.hlp.player[nGroupIndex].name].hero > self.hlp.player[nGroupIndex].hero then
-							self.hlp.player[nGroupIndex].hero = self.rat[self.hlp.player[nGroupIndex].name].hero
+					if self.rat[getPlayersName] ~= nil then
+						if self.rat[getPlayersName].hero ~= nil then
+							if self.rat[getPlayersName].hero > self.hlp.player[nGroupIndex].hero then
+								self.hlp.player[nGroupIndex].hero = self.rat[getPlayersName].hero
+							end
 						end
-					end					
+					end			
 				else
 					if getPlayersName then
 						if self.rat[getPlayersName] ~= nil and self.rat[getPlayersName].hero ~= nil then
@@ -396,7 +407,7 @@ function ALL:checkForBossDeaths(self)
 					self.hlp.doesRelicBloodExist:Start()
 				end
 
-				self:Debug(self.hlp.isBossDead.name .. " is dead.")
+				self:Rover(self.hlp.isBossDead.name, false, "is dead.")
 			end
 		end
 	end

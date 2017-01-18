@@ -14,6 +14,7 @@
 -- things to ask Zod: can "REDIRECT_nameoftimer" be done better?
 -- things to ask Zod: how to solve group join and group leave efficiently?
 -- things to ask Zod: do i need to transfer self variable when comunicating with modules like i do? example: KV:OnPublicEventStatsUpdate(self)
+-- things to ask Zod: how can i call other modules from other modules and is it better performance than current "workaround"
 -- things to ask Zod: how effectively include calling reQue addon after group gets full or after boss in dungeon gets killed (momentarily done with /rq command)
 
 require "Apollo"
@@ -144,6 +145,7 @@ function RIPgold:OnDocLoaded()
 		self.hlp.isChannelerChallengeActive = ApolloTimer.Create(0.2, false, "REDIR_checkForChannelerChallengeActive", self)
 		self.hlp.isChannelerChallengeActive:Stop()
 
+		-- connects this file with ALL and SSM (can it be done better?)
 		self.hlp.doesRelicBloodExist = ApolloTimer.Create(30, false, "REDIR_checkForRelicOfBlood", self)
 		self.hlp.doesRelicBloodExist:Stop()
 
@@ -185,7 +187,7 @@ function RIPgold:addToSet(set, key) -- not being used, future reference
     set[key] = true
 end
 
-function RIPgold:removeFromSet(set, key) -- not being used, future reference
+function RIPgold:removeFromSet(set, key)
     set[key] = nil
 end
 
@@ -206,19 +208,27 @@ end
 function RIPgold:Rover(testedVar, addTimeStamp, addSpecialVar)
 	if SendVarToRover then
 
-		if addTimeStamp then
-			addTimeStamp = " "..GameLib.GetGameTime()
+		local testedVarName = ""
+
+		if testedVar == nil then
+			testedVarName = ""
 		else
-			addTimeStamp = ""
+			testedVarName = string.format("%s",testedVar)
 		end
 
-		if addSpecialVar then 
-			addSpecialVar = " "..addSpecialVar
+		if addTimeStamp == nil or addTimeStamp == false then
+			addTimeStamp = ""
 		else
+			addTimeStamp = GameLib.GetGameTime()
+		end
+
+		if addSpecialVar == nil or addSpecialVar == false then
 			addSpecialVar = ""
 		end
 
-		SendVarToRover(testedVar..addSpecialVar..addTimeStamp, testedVar)
+		local message = string.format("%s %s %s",testedVarName,addSpecialVar,addTimeStamp)
+
+		SendVarToRover(message, testedVar)
 	end
 end
 
@@ -344,7 +354,7 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 					self.hlp.boss[bossName] = true
 					-- info about fails at the end of the dungeon -> starts timer when these names occurs
 					ALL:precheckForBossDeaths(self, unitInCombat)
-					self:Rover("", false, bossName .. " alive.")
+					self:Rover(bossName, false, "alive.")
 				end
 			end
 			PA:OnCombat_IN(self, unitInCombat)
@@ -367,7 +377,7 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 				if bossName == unitInCombatName then
 					self.hlp.boss[bossName] = false
 					self.hlp.alreadyFailedChallenge = false
-					self:Rover("", false, bossName .. " out of combat.")
+					self:Rover(bossName, false, "out of combat.")
 				end
 			end
 		end
@@ -387,6 +397,7 @@ end
 function RIPgold:OnUnitCreated(unit)
 	-- WARNING! Has to be outside hlp.isInDungeon because isInDungeon is set in OnPublicEventStart which happens after Units are created and so variables with these units would be overriden
 	STL:OnUnitCreatedBeforeEnteringDungeon(self, unit)
+	PA:OnUnitCreatedBeforeEnteringDungeon(self, unit)
 
 	if self.hlp.isInDungeon then
 		PA:OnUnitCreated(self, unit)
@@ -428,7 +439,9 @@ function RIPgold:OnCombatLogDamage(tEventArgs)
 	end
 end
 
--- testing purposes
+-----------------------------------------------------------------------------------------------
+-- Group-related event handlers, mostly testing purposes → will be simplified
+-----------------------------------------------------------------------------------------------
 
 function RIPgold:OnGroup_Join(var)
 	self:Rover(var, true, "OnGroup_Join")
@@ -445,7 +458,8 @@ function RIPgold:OnGroup_Left(var)
 		UIn:OnBTN_statsClick(self)
 	end
 
-	-- somehow not working
+	-- somehow not working 100% but why? would help af
+	-- better version -> OnGroup_Remove
 end
 
 function RIPgold:OnGroup_Remove(var)
@@ -454,7 +468,8 @@ function RIPgold:OnGroup_Remove(var)
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
 	end
-	-- just testing this, will it work?
+	-- seems to be working everytime someone leaves party -> best function whatsoever
+
 end
 
 function RIPgold:OnGroup_Player_Left(var)
@@ -653,7 +668,7 @@ function RIPgold:AddTooltip(getTarget, getMessage)
 end
 
 function RIPgold:AddTooltips(getMessage)
-	
+
 	if self.get.GroupMaxSize == 0 then
 
 		local getTooltipOld = self.hlp.player[1].tooltip
@@ -672,7 +687,7 @@ function RIPgold:AddTooltips(getMessage)
 end
 
 -----------------------------------------------------------------------------------------------
--- Timers redirect
+-- Timers redirect, because I have no clue how to transfer self variable in timers, RIPcoding
 -----------------------------------------------------------------------------------------------
 
 function RIPgold:REDIR_ALL_HowManyFails() -- workaround: because Apollo's lua is out of my understanding 
@@ -742,10 +757,12 @@ function RIPgold:OnBTN_settingsClick()
 	UIs:OnBTN_settingsClick(self)
 end
 
--- ## card: settings
+----[ card: settings ]------------------------------------------------------------
 function RIPgold:OnBTN_SET_SoundClick(wndControl)
 	UIs:OnBTN_SET_SoundClick(self, wndControl)
 end
+
+----[ card: group ]---------------------------------------------------------------
 
 function RIPgold:onBOX_announceChange(wndControl)
 	UIn:onBOX_announceChange(self, wndControl)

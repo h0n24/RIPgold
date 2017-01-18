@@ -13,6 +13,31 @@ UIr.null = setmetatable ({}, {
 -- Initialize variables
 -----------------------------------------------------------------------------------------------
 
+-- Customized version of pairs which iterates over the table in a sorted order
+function spairs(t, order)
+    -- collect the keys
+    local keys = {}
+    for k in pairs(t) do keys[#keys+1] = k end
+
+    -- if order function given, sort by it by passing the table and keys a, b,
+    -- otherwise just sort the keys 
+    if order then
+        table.sort(keys, function(a,b) return order(t, a, b) end)
+    else
+        table.sort(keys)
+    end
+
+    -- return the iterator function
+    local i = 0
+    return function()
+        i = i + 1
+        if keys[i] then
+            return keys[i], t[keys[i]]
+        end
+    end
+end
+
+
 function UIr:OnBTN_ratingsClick(self)
 	self.wndMain:FindChild("WIN_stats"):Show(false)
 	self.wndMain:FindChild("WIN_ratings"):Show(true)
@@ -24,32 +49,45 @@ function UIr:OnBTN_ratingsClick(self)
 	self.wndMain:FindChild("TOP_BG_custom"):SetBGColor("99000000")
 	self.wndMain:FindChild("TOP_BG_settings"):SetBGColor("99000000")
 
+	local tableRating = {}
+	local tableDungs = {}
 	
 	self.wndMain:FindChild("TABLE_rating"):DeleteAll()
-    for index,data in pairs(self.rat) do
-    	--rowsNumber = rowsNumber + 1
-		local tRow = self.wndMain:FindChild("TABLE_rating"):AddRow("")
-	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 1, index)
+	self.wndMain:FindChild("TABLE_dungs"):DeleteAll()
 
-	    local rating = string.format("%2.0f", data["rating"] / 100)
-	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 2, rating)
-	    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 3, data["dungs"])
+    for index,data in pairs(self.rat) do
+    	tableRating[index] = data["rating"]
+    	tableDungs[index] = data["dungs"]
     end
 
-	SendVarToRover("table_rating",self.wndMain:FindChild("TABLE_rating"))
-	SendVarToRover("self",self)
+    -- removes current player ("myself") from statistics
+    local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+    self:removeFromSet(tableRating, getCurrentPlayerName)
+    self:removeFromSet(tableDungs, getCurrentPlayerName)
 
-	UIr:setTableHeight(self)
+    local i = 0
+	for index,rating in spairs(tableRating, function(t,a,b) return t[b] < t[a] end) do
+		i = i+1
+		if i < 10 then
+			local tRow = self.wndMain:FindChild("TABLE_rating"):AddRow("")
+		    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 1, index)
+
+		    local readableRating = string.format("%2.0f", rating / 100)
+		    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 2, readableRating)
+		end
+	end
+
+    local i = 0
+	for index,dungs in spairs(tableDungs, function(t,a,b) return t[b] < t[a] end) do
+		i = i+1
+		if i < 10 then
+			local tRow = self.wndMain:FindChild("TABLE_dungs"):AddRow("")
+		    self.wndMain:FindChild("TABLE_dungs"):SetCellText(tRow, 1, index)
+		    self.wndMain:FindChild("TABLE_dungs"):SetCellText(tRow, 2, dungs)
+		end
+	end	
 
 	self.wndMain:FindChild("WIN_ratings"):ArrangeChildrenVert(0)
-end
-
-function UIr:setTableHeight(self)
-	local rowsNumber = self.wndMain:FindChild("TABLE_rating"):GetRowCount()
-	local tableWidth = self.wndMain:GetWidth() - 50
-	local tableHeight = rowsNumber*25 + 30
-
-    self.wndMain:FindChild("TABLE_rating"):SetAnchorOffsets(10,0,tableWidth,tableHeight)
 end
 
 function UIr:OnLoad() end

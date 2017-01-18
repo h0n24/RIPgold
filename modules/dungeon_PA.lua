@@ -15,7 +15,17 @@ PA.null = setmetatable ({}, {
 -- All Bosses
 -----------------------------------------------------------------------------------------------
 
+function PA:OnUnitCreatedBeforeEnteringDungeon(self, unit)
+	if getUnitName == "Invulnotron" then
+		self.hlp.unitInvulnotron = unit
+	end
+	if getUnitName == "Iruki Boldbeard" then
+		self.hlp.unitIruki = unit
+	end
+end
+
 function PA:OnPublicEventStatsUpdate(self)
+	self:Rover(self.hlp.unitIruki, false, false)
 end
 
 function PA:OnCombat_IN(self, unitInCombat)

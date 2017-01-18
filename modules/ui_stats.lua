@@ -110,55 +110,85 @@ function UIn:UpdateRIPgoldStats(self)
 	    		self.wndMain:FindChild("PL_name_"..i):SetText("")
 	    		self.wndMain:FindChild("PL_rr_"..i):SetText("")
 	    		self.wndMain:FindChild("PL_fails_"..i):SetText("")
-	    		self.wndMain:FindChild("PL_ctrl_"..i):Show(false)
+	    		--self.wndMain:FindChild("PL_ctrl_"..i):Show(false)
+	    		self.wndMain:FindChild("PL_fails_"..i.."_whisper"):Show(false)
 	    	else
-	    		self.wndMain:FindChild("PL_ctrl_"..i):Show(true)
+	    		--self.wndMain:FindChild("PL_ctrl_"..i):Show(true)
 		    	self.wndMain:FindChild("PL_name_"..i):SetText(self.hlp.player[i].name)
+
+		    	-- tooltip
+		    	local RRtooltip = ""
+				local ratingFull = ""
+				local rating = ""
 
 		    	function GetRating()
 			   		local testVar = self.rat[self.hlp.player[i].name]["rating"] ~= nil
 				end
 
 				if pcall(GetRating) then
-					local rating = self.rat[self.hlp.player[i].name]["rating"] / 100
-					local rating = string.format("%2.0f", self.rat[self.hlp.player[i].name]["rating"] / 100)
-
-					self.wndMain:FindChild("PL_rr_"..i):SetText(rating)
+					ratingFull = string.format("%2.2f", self.rat[self.hlp.player[i].name]["rating"] / 100)
+					rating = string.format("%2.0f", self.rat[self.hlp.player[i].name]["rating"] / 100)
 				else
-					self.wndMain:FindChild("PL_rr_"..i):SetText("10")
+					ratingFull = "Not yet RRated."
+					rating = "10"
 				end
 		    	
-		    	self.wndMain:FindChild("PL_fails_"..i):SetText(self.hlp.player[i].fails)
+		    	self.wndMain:FindChild("PL_rr_"..i):SetText(rating)
+
+		    	RRtooltip = RRtooltip.."RR: "..ratingFull.."\n\n"
+
+		    	ALL:getTooltipStats(self)
+
+		    	local ilvl = self.hlp.player[i].ilvl
+		    	if ilvl ~= nil and tonumber(ilvl) > 0 then
+		    		RRtooltip = RRtooltip.."ilvl: "..ilvl.."\n\n"
+		    	end
+
+		    	local heroism = self.hlp.player[i].hero
+		    	if heroism  ~= nil and tonumber(heroism) > 0 then 
+					RRtooltip = RRtooltip.."heroism: "..heroism.."\n\n"
+				end
+
+		    	local dungs = self.hlp.player[i].dungs
+		    	if dungs ~= nil and tonumber(dungs) > 0 then 
+					RRtooltip = RRtooltip.."dungeons completed: "..dungs.."\n\n"
+				end
+
+
+		    	self.wndMain:FindChild("PL_rr_"..i):SetTooltip(RRtooltip)
+
+		    	-- rest
+		    	self.wndMain:FindChild("PL_fails_"..i.."_whisper"):Show(true)
+		    	self.wndMain:FindChild("PL_fails_"..i.."_whisper"):SetText(self.hlp.player[i].fails)
 
 		    	if self.hlp.player[i].tooltip == "" then
-		    		self.wndMain:FindChild("BTN_PL_info_"..i):SetTooltip("No fails.")
+		    		self.wndMain:FindChild("PL_fails_"..i.."_whisper"):SetTooltip("No fails.")
 		    	else
-		    		self.wndMain:FindChild("BTN_PL_info_"..i):SetTooltip(self.hlp.player[i].tooltip)
+		    		self.wndMain:FindChild("PL_fails_"..i.."_whisper"):SetTooltip("Whisper to "..self.hlp.player[i].name..":\n\n  \n"..self.hlp.player[i].tooltip)
+
+		    		--self.wndMain:FindChild("BTN_PL_whisper_"..i):SetTooltip("Whisper to "..self.hlp.player[i].name..":\n\n  \n"..self.hlp.player[i].tooltip)
 		    	end
 
 		    	if self.hlp.player[i].fails == 0 then
 		    		self.wndMain:FindChild("PL_fails_"..i):Show(false)
-					self.wndMain:FindChild("PL_ctrl_"..i):Show(false)
+					--self.wndMain:FindChild("PL_ctrl_"..i):Show(false)
 				else
 					self.wndMain:FindChild("PL_fails_"..i):Show(true)
-					self.wndMain:FindChild("PL_ctrl_"..i):Show(true)
+					--self.wndMain:FindChild("PL_ctrl_"..i):Show(true)
 				end
 
 				totalFails = totalFails + self.hlp.player[i].fails
-
 		    end
 		end
     end
 
     if totalFails == 0 then
 		self.wndMain:FindChild("PL_fails_header"):Show(false)
-		self.wndMain:FindChild("PL_ctrl_header"):Show(false)
+		--self.wndMain:FindChild("PL_ctrl_header"):Show(false)
     else
 		self.wndMain:FindChild("PL_fails_header"):Show(true)
-		self.wndMain:FindChild("PL_ctrl_header"):Show(true)
+		--self.wndMain:FindChild("PL_ctrl_header"):Show(true)
     end
-
-    --self:Debug("GetMemberCount ".. GroupLib.GetMemberCount())
 
 end
 
@@ -343,8 +373,6 @@ function UIn:onBTN_announceClick(self)
 				
 			end			
 		end
-
-		SendVarToRover("invitation", GroupLib.GetJoinRequestMethod())
 
 		-- set open referrals
 		if GroupLib.GetReferralMethod() ~= GroupLib.InvitationMethod.Open then

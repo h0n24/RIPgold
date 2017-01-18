@@ -9,7 +9,6 @@
 -- todo: make announcing more simpler → include repeating announcing to normal announcing + turn of in settings
 -- todo: use custom messages from settings
 -- todo: disband doesnt grants rating to players, same for leaver
--- todo: show ilvl and heroism
 
 -- things to ask Zod: do i need to use pcalls like i do? can it be done better way?
 -- things to ask Zod: can "REDIRECT_nameoftimer" be done better?
@@ -61,13 +60,16 @@ function RIPgold:new(o)
 	self.set = {} -- all settings
 	self.rat = {} -- all ratings
 
+	-- initialize core variables here (wont be saved, performance related)
+	self.get = {}
+	self.get.GroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone and 20 when in raid
     return o
 end
 
 function RIPgold:Init()
 	local bHasConfigureFunction = false
 	local strConfigureButtonText = ""
-	local tDependencies = {
+	local tDependencies = { -- to be honest i have no clue how this is supposed to work (using Apollo.GetPackage instead)
 		-- "UnitOrPackageName",
 	}
     Apollo.RegisterAddon(self, bHasConfigureFunction, strConfigureButtonText, tDependencies)
@@ -78,7 +80,7 @@ end
 -- RIPgold OnLoad
 -----------------------------------------------------------------------------------------------
 function RIPgold:OnLoad()
-    -- load our form file
+    -- loading form file → on a mission of keeping it as smaler possible, cuz overwhelmed UI can slow down interface (example Carabine Addon WelcomeWindow or ChatLog)
 	self.xmlDoc = XmlDoc.CreateFromFile("RIPgold.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
 end
@@ -104,21 +106,17 @@ function RIPgold:OnDocLoaded()
 		-- slash commands
 		Apollo.RegisterSlashCommand("rip", "OnRIPgoldOn", self)
 
-		-- Do additional Addon initialization here
+		-- core event handlers
 		Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
 		Apollo.RegisterEventHandler("CombatLogDamage", "OnCombatLogDamage", self)
-
 		Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 		Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
-
 		Apollo.RegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
-
 		Apollo.RegisterEventHandler("PublicEventStart",	"OnPublicEventStart", self)
 		Apollo.RegisterEventHandler("PublicEventStatsUpdate", "OnPublicEventStatsUpdate", self)
-
 		Apollo.RegisterEventHandler("ChangeWorld", "OnWorldChange", self)
 
-		-- testing purposes (group related events) → todo: simplify
+		-- Group related handlers, currently in testing → todo: simplify to most effective group management
 		Apollo.RegisterEventHandler("Group_Join", "OnGroup_Join", self)
 		Apollo.RegisterEventHandler("Group_Left", "OnGroup_Left", self)
 		Apollo.RegisterEventHandler("Group_Player_Left", "OnGroup_Player_Left", self)
@@ -133,15 +131,6 @@ function RIPgold:OnDocLoaded()
 		self.checkDeadState = ApolloTimer.Create(1, true, "REDIR_checkForPlayerDeaths", self) 
 		self.checkDeadState:Stop()
 
-		-- updating ui every second when opened → already made new fuction, updated on fails
-		-- self.updateStatsUI = ApolloTimer.Create(1, true, "UpdateRIPgoldStatsUI", self)
-		-- self.updateStatsUI:Stop()
-
-
-
-		--self.hlp.isBossDead = {
-		--	["ID"] = 0, ["name"] = "", ["dead"] = false, ["timer"] = nilw
-		--}
 		self.hlp.isBossDead = {}
 		self.hlp.isBossDead.timer = ApolloTimer.Create(1, true, "REDIR_checkForBossDeaths", self)
 		self.hlp.isBossDead.timer:Stop()
@@ -158,7 +147,7 @@ function RIPgold:OnDocLoaded()
 		self.hlp.doesRelicBloodExist = ApolloTimer.Create(30, false, "REDIR_checkForRelicOfBlood", self)
 		self.hlp.doesRelicBloodExist:Stop()
 
-		if self.tSavedVariables == nil then
+		if self.dataRestored == nil then -- gonna be processed only if something happened to previous saved file
 
 			self.hlp.peMatch = nil
 			self.hlp.isInDungeon = false
@@ -171,8 +160,8 @@ function RIPgold:OnDocLoaded()
 			end
 
 			self.set.sound = true
-			-- additional sounds: self:PlaySound(Sound.PlayUIQueuePopsAdventure)
-			-- additional sounds: self:PlaySound(Sound.PlayUI47CancelVirtual)
+			-- additional sounds (future reference): Sound.PlayUIQueuePopsAdventure
+			-- additional sounds (future reference): Sound.PlayUI47CancelVirtual
 			self.set.soundType = Sound.PlayUI11To13GenericPushButtonDigital02
 		end
 
@@ -182,14 +171,9 @@ function RIPgold:OnDocLoaded()
 			self.rat[getCurrentPlayerName]["fails"] = 0
 			self.rat[getCurrentPlayerName]["rating"] = 1000
 			self.rat[getCurrentPlayerName]["dungs"] = 0
+			self.rat[getCurrentPlayerName]["ilvl"] = 0
+			self.rat[getCurrentPlayerName]["hero"] = 0
 		end
-
-		--- testing purposes
-		--self.hlp.isInDungeon = true
-		--self.hlp.boss["Blade-Wind the Invoker"] = true
-		--self.hlp.lastRelic = nil
-		--self.hlp.thisRelic = nil
-
 	end
 end
 
@@ -219,6 +203,25 @@ function RIPgold:Debug(fnString)
 	ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_System, fnString, "RIPgold")
 end
 
+function RIPgold:Rover(testedVar, addTimeStamp, addSpecialVar)
+	if SendVarToRover then
+
+		if addTimeStamp then
+			addTimeStamp = " "..GameLib.GetGameTime()
+		else
+			addTimeStamp = ""
+		end
+
+		if addSpecialVar then 
+			addSpecialVar = " "..addSpecialVar
+		else
+			addSpecialVar = ""
+		end
+
+		SendVarToRover(testedVar..addSpecialVar..addTimeStamp, testedVar)
+	end
+end
+
 
 -----------------------------------------------------------------------------------------------
 -- Event Handlers
@@ -243,7 +246,7 @@ function RIPgold:OnPublicEventStart()
 				return
 			end
 
-			--SendVarToRover("Dungeon event", peCurrent)
+			--self:Rover(peCurrent, false, "Dungeon event")
 
 			if peCurrent:ShouldShowMedalsUI() then
 				-- processed after and only entering new dungeon -> reseting points etc
@@ -255,13 +258,10 @@ function RIPgold:OnPublicEventStart()
 				ALL:PreparePlayers(self)
 
 				self.checkDeadState:Start()
-					
 				self.hlp.peMatch = true
 
 				UIn:OnBTN_statsClick(self)
 
-				--SendVarToRover("self", self)
-				
 				return true
 			end
 		end
@@ -269,7 +269,7 @@ function RIPgold:OnPublicEventStart()
 end
 
 function RIPgold:OnPublicEventStatsUpdate(peUpdated)
-	if self.hlp.isInDungeon then --if not in raid → if in dungeon
+	if self.hlp.isInDungeon then --if in dungeon
 
 		function IsPeUpdated()
 		   local getPeUpdated = peUpdated:GetEventType() ~= nil
@@ -288,10 +288,8 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 				return
 			end
 
-			--SendVarToRover("self", self)
 			-- code connected with event points
-				--local timeinfo = string.format("OnPublicEventStatsUpdate - %s", GameLib.GetGameTime())
-				--SendVarToRover(timeinfo, peUpdated)
+			--self:Rover(peUpdated, true, "OnPublicEventStatsUpdate")
 		end
 
 		function IsPeObjectives()
@@ -299,7 +297,6 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 		end
 
 		if pcall(IsPeObjectives) then
-			self.hlp.event_testing = {} -- testing purposes
 
 			-- technically all event points
 			local objectives = peUpdated:GetObjectives()
@@ -312,8 +309,6 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 
 					self.hlp.event[eventName] = eventStatus
 				end
-				-- testing purposes (needs massive performance, so care!)
-				--self.hlp.event_testing[eventName] = obj
 
 				-- specifically for collecting torine relics
 				if obj:GetShortDescription() == "Collect Torine Spirit-Relics" then
@@ -321,15 +316,13 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 				end
 			end
 
-			--SendVarToRover("events " .. GameLib.GetGameTime(), self.hlp.event)
-			--SendVarToRover("events_testing" .. GameLib.GetGameTime(), self.hlp.event_testing)
 			PA:OnPublicEventStatsUpdate(self)
 			STL:OnPublicEventStatsUpdate(self)
 			KV:OnPublicEventStatsUpdate(self)
 			SC:OnPublicEventStatsUpdate(self)
 			SSM:OnPublicEventStatsUpdate(self)
 		end
-	end -- if not in raid
+	end --if in dungeon
 end
 
 function RIPgold:OnWorldChange()
@@ -351,7 +344,7 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 					self.hlp.boss[bossName] = true
 					-- info about fails at the end of the dungeon -> starts timer when these names occurs
 					ALL:precheckForBossDeaths(self, unitInCombat)
-					self:Debug(bossName .. " alive.")
+					self:Rover("", false, bossName .. " alive.")
 				end
 			end
 			PA:OnCombat_IN(self, unitInCombat)
@@ -374,7 +367,7 @@ function RIPgold:OnCombat(unitInCombat, bInCombat)
 				if bossName == unitInCombatName then
 					self.hlp.boss[bossName] = false
 					self.hlp.alreadyFailedChallenge = false
-					self:Debug(bossName .. " out of combat.")
+					self:Rover("", false, bossName .. " out of combat.")
 				end
 			end
 		end
@@ -392,8 +385,9 @@ function RIPgold:OnCombatLogVitalModifier(tEventArgs)
 end
 
 function RIPgold:OnUnitCreated(unit)
+	-- WARNING! Has to be outside hlp.isInDungeon because isInDungeon is set in OnPublicEventStart which happens after Units are created and so variables with these units would be overriden
+	STL:OnUnitCreatedBeforeEnteringDungeon(self, unit)
 
-	STL:OnUnitCreatedBeforeEnteringDungeon(self, unit) -- ! has to be outside hlp.isInDungeon
 	if self.hlp.isInDungeon then
 		PA:OnUnitCreated(self, unit)
 		STL:OnUnitCreated(self, unit)
@@ -437,7 +431,7 @@ end
 -- testing purposes
 
 function RIPgold:OnGroup_Join(var)
-	SendVarToRover("OnGroup_Join "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Join")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -445,7 +439,7 @@ function RIPgold:OnGroup_Join(var)
 end
 
 function RIPgold:OnGroup_Left(var)
-	SendVarToRover("OnGroup_Left "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Left")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -455,7 +449,7 @@ function RIPgold:OnGroup_Left(var)
 end
 
 function RIPgold:OnGroup_Remove(var)
-	SendVarToRover("OnGroup_Remove "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Remove")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -464,7 +458,7 @@ function RIPgold:OnGroup_Remove(var)
 end
 
 function RIPgold:OnGroup_Player_Left(var)
-	SendVarToRover("OnGroup_Player_Left "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Player_Left")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -472,7 +466,7 @@ function RIPgold:OnGroup_Player_Left(var)
 end
 
 function RIPgold:OnGroup_Other_Left(var)
-	SendVarToRover("OnGroup_Other_Left "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Other_Left")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -480,7 +474,7 @@ function RIPgold:OnGroup_Other_Left(var)
 end
 
 function RIPgold:OnGroup_Disbanded(var)
-	SendVarToRover("OnGroup_Disbanded "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Disbanded")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -488,7 +482,7 @@ function RIPgold:OnGroup_Disbanded(var)
 end
 
 function RIPgold:OnGroup_Add(var)
-	SendVarToRover("OnGroup_Add "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Add")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -496,7 +490,7 @@ function RIPgold:OnGroup_Add(var)
 end
 
 function RIPgold:OnGroup_Changed(var)
-	SendVarToRover("OnGroup_Changed "..GameLib.GetGameTime(), var)
+	self:Rover(var, true, "OnGroup_Changed")
 
 	if self.hlp.isInDungeon == false then
 		UIn:OnBTN_statsClick(self)
@@ -504,16 +498,11 @@ function RIPgold:OnGroup_Changed(var)
 end
 
 function RIPgold:OnGroup_Updated(var)
-	--SendVarToRover("OnGroup_Updated "..GameLib.GetGameTime(), var)
-
-	--UIn:OnBTN_statsClick(self)
-
 	-- cycles virtually every sec which is meh event
+
+	--self:Rover(var, true, "OnGroup_Updated")
+	--UIn:OnBTN_statsClick(self)
 end
-
-
-
-
 
 -----------------------------------------------------------------------------------------------
 -- Core Functions
@@ -552,23 +541,40 @@ function RIPgold:SendToChat(fnString)
 	end
 end
 
+function RIPgold:UpdateUIAlert(fails, tooltip) --icon alert base function
+	Event_FireGenericEvent("InterfaceMenuList_AlertAddOn", "RIPgold", {true, tooltip, fails})
+end
+
+function RIPgold:UpdateUIAlertForced() --updates icon alert
+
+	local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+	for i=1,5 do
+		if getCurrentPlayerName == self.hlp.player[i].name then
+			if self.hlp.player[i].fails > 0 then
+				self:UpdateUIAlert(self.hlp.player[i].fails, self.hlp.player[i].tooltip)
+			end
+		end 
+	end
+end
+
 function RIPgold:CountFails(getTarget)
+	-- variables
+	local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
 
 	-- sounds when player fails
-	local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
 	if getTarget == getCurrentPlayerName then
 		self:PlaySound(self.set.soundType)
 	end
 
 	-- counting fails
-	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
-
-	if getGroupMaxSize == 0 then
+	if self.get.GroupMaxSize == 0 then
 
 		local getFailsOld = self.hlp.player[1].fails
 		self.hlp.player[1].fails = getFailsOld + 1
+
+		self:UpdateUIAlert(self.hlp.player[1].fails, self.hlp.player[1].tooltip)
 	else
-		for nGroupIndex=1,getGroupMaxSize do 
+		for nGroupIndex=1,self.get.GroupMaxSize do 
 
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 			if getGroupMember ~= nil then
@@ -578,6 +584,10 @@ function RIPgold:CountFails(getTarget)
 
 					local getFailsOld = self.hlp.player[nGroupIndex].fails
 					self.hlp.player[nGroupIndex].fails = getFailsOld + 1
+
+					if getCurrentPlayerName == self.hlp.player[nGroupIndex].name then
+						self:UpdateUIAlert(self.hlp.player[nGroupIndex].fails, self.hlp.player[nGroupIndex].tooltip)
+					end					
 				end
 			end
 		end
@@ -590,20 +600,25 @@ function RIPgold:CountFails(getTarget)
 end
 
 function RIPgold:AddFails()
-	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
 
-	if getGroupMaxSize == 0 then
+	if self.get.GroupMaxSize == 0 then
 
 		local getFailsOld = self.hlp.player[1].fails
 		self.hlp.player[1].fails = getFailsOld + 1
+
+		self:UpdateUIAlert(self.hlp.player[1].fails, self.hlp.player[1].tooltip)
 	else
-		for nGroupIndex=1,getGroupMaxSize do
+		for nGroupIndex=1,self.get.GroupMaxSize do
 
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 			if getGroupMember ~= nil then
 
 				local getFailsOld = self.hlp.player[nGroupIndex].fails
 				self.hlp.player[nGroupIndex].fails = getFailsOld + 1
+
+				if GameLib.GetPlayerUnit(1):GetName() == self.hlp.player[nGroupIndex].name then
+					self:UpdateUIAlert(self.hlp.player[nGroupIndex].fails, self.hlp.player[nGroupIndex].tooltip)
+				end
 			end
 		end
 	end
@@ -615,14 +630,13 @@ function RIPgold:AddFails()
 end
 
 function RIPgold:AddTooltip(getTarget, getMessage)
-	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
 
-	if getGroupMaxSize == 0 then
+	if self.get.GroupMaxSize == 0 then
 
 		local getTooltipOld = self.hlp.player[1].tooltip
 		self.hlp.player[1].tooltip = getTooltipOld .. getMessage .. "\n"
 	else
-		for nGroupIndex=1,getGroupMaxSize do 
+		for nGroupIndex=1,self.get.GroupMaxSize do 
 
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 			if getGroupMember ~= nil then
@@ -639,14 +653,13 @@ function RIPgold:AddTooltip(getTarget, getMessage)
 end
 
 function RIPgold:AddTooltips(getMessage)
-	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
-
-	if getGroupMaxSize == 0 then
+	
+	if self.get.GroupMaxSize == 0 then
 
 		local getTooltipOld = self.hlp.player[1].tooltip
 		self.hlp.player[1].tooltip = getTooltipOld .. getMessage .. "\n"
 	else
-		for nGroupIndex=1,getGroupMaxSize do
+		for nGroupIndex=1,self.get.GroupMaxSize do
 
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 			if getGroupMember ~= nil then
@@ -661,7 +674,6 @@ end
 -----------------------------------------------------------------------------------------------
 -- Timers redirect
 -----------------------------------------------------------------------------------------------
-
 
 function RIPgold:REDIR_ALL_HowManyFails() -- workaround: because Apollo's lua is out of my understanding 
 	ALL:HowManyFails(self)
@@ -687,47 +699,30 @@ function RIPgold:REDIR_checkForRelicOfBlood()
 	SSM:checkForRelicOfBlood(self)
 end
 
-
-
-
 -----------------------------------------------------------------------------------------------
 -- UI Functions (RIPgoldForm Functions)
 -----------------------------------------------------------------------------------------------
 
 -- icon for interface menu
 function RIPgold:OnInterfaceMenuListHasLoaded()
-	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "RIPgold", {"ToggleRIPgoldUI", "", ""}) --IconSprites:Icon_Windows_UI_CRB_Rival icon before (terrible meh)
+	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "RIPgold", {"ToggleRIPgoldUI", "", "IconSprites:Icon_Mission_Scientist_ScanMineral"})
+	self:UpdateUIAlertForced()
 end
 
 -- on SlashCommand "/rip"
 function RIPgold:OnRIPgoldOn()
 
-	--self.updateStatsUI:Start() -- not being used
-	self.hlp.updateStatsUI = true
+	self.hlp.updateStatsUI = true --prevents window updating when its closed (false)
 	UIn:UpdateRIPgoldStats(self)
-
-	self:OnBTN_statsClick() --instead of self.wndMain:FindChild("WRAP_FAILS"):ArrangeChildrenVert(0)
+	self:OnBTN_statsClick()
 
 	self.wndMain:Invoke() -- show the window
-
-	SendVarToRover("self.tSavedVariables",self.tSavedVariables)
-
-	--SendVarToRover("self.rat",self.tSavedVariables)
-
-	--table.insert("test", self.rat)	
-
-	--self:Debug(self.hlp.player[1].name .. ": " .. self.hlp.player[1].fails)
-	--self:Debug(self.hlp.player[2].name .. ": " .. self.hlp.player[2].fails)
-	--self:Debug(self.hlp.player[3].name .. ": " .. self.hlp.player[3].fails)
-	--self:Debug(self.hlp.player[4].name .. ": " .. self.hlp.player[4].fails)
-	--self:Debug(self.hlp.player[5].name .. ": " .. self.hlp.player[5].fails)
 end
 
 -- when the Cancel button is clicked
 function RIPgold:OnCancel()
 	self.wndMain:Close() -- hide the window
-	--self.updateStatsUI:Stop() -- not being used
-	self.hlp.updateStatsUI = false
+	self.hlp.updateStatsUI = false --prevents window updating when its closed (false)
 end
 
 -- card menu, top menu buttons click
@@ -751,16 +746,6 @@ end
 function RIPgold:OnBTN_SET_SoundClick(wndControl)
 	UIs:OnBTN_SET_SoundClick(self, wndControl)
 end
-
--- ## card: my group (old statistics)
-
--- function RIPgold:UpdateRIPgoldStatsUI() -- not being used
---  	UIn:UpdateRIPgoldStats(self)
--- end
-
---function RIPgold:UpdateAnnounceUI() -- not being used
--- 	UIn:UpdateAnnounceUI(self)
---end
 
 function RIPgold:onBOX_announceChange(wndControl)
 	UIn:onBOX_announceChange(self, wndControl)
@@ -793,23 +778,23 @@ end
 
 -- whispers
 function RIPgold:BTN_PL_whisper_1Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[1].name.." Mistakes you've made: "..self.hlp.player[1].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[1].name.." "..self.hlp.player[1].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_2Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[2].name.." Mistakes you've made: "..self.hlp.player[2].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[2].name.." "..self.hlp.player[2].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_3Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[3].name.." Mistakes you've made: "..self.hlp.player[3].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[3].name.." "..self.hlp.player[3].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_4Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[4].name.." Mistakes you've made: "..self.hlp.player[4].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[4].name.." "..self.hlp.player[4].tooltip)
 end
 
 function RIPgold:BTN_PL_whisper_5Click()
-	ChatSystemLib.Command("/w "..self.hlp.player[5].name.." Mistakes you've made: "..self.hlp.player[5].tooltip)
+	ChatSystemLib.Command("/w "..self.hlp.player[5].name.." "..self.hlp.player[5].tooltip)
 end
 
 
@@ -818,43 +803,36 @@ end
 -----------------------------------------------------------------------------------------------
 function RIPgold:OnSave(eLevel)
 	local tData = {}
-	-- This example uses account level saves.
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
-	-- Set your variables into tData
-		tData.hlp = {}
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then -- This addon uses account level saves
+		tData.hlp = {} -- helpers & variables
 		for name,data in pairs(self.hlp) do
 			tData.hlp[name] = data
 		end
-		tData.set = {}
+		tData.set = {} -- settings related
 		for name,data in pairs(self.set) do
 			tData.set[name] = data
 		end
-		tData.rat = {}
+		tData.rat = {} -- rating related
 		for name,data in pairs(self.rat) do
 			tData.rat[name] = data
 		end
-		--Sound.Play(Sound.PlayUIQueuePopsAdventure) testing purposes
 	end
 	
 	return tData
 end
 
 function RIPgold:OnRestore(eLevel, tData)
-	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then
-		-- Set your reference for the saved variables
-		-- This example simply sets a table to mimic the loaded data. You can change this to split data up as you like.
-		
-		for name,data in pairs(tData.hlp) do
+	if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then -- This addon uses account level saves
+		for name,data in pairs(tData.hlp) do -- helpers & variables
 			self.hlp[name] = data
 		end
-		for name,data in pairs(tData.set) do
+		for name,data in pairs(tData.set) do -- settings related
 			self.set[name] = data
 		end
-		for name,data in pairs(tData.rat) do
+		for name,data in pairs(tData.rat) do -- rating related
 			self.rat[name] = data
 		end
-
-		self.tSavedVariables = tData
+		self.dataRestored = true --used in setting variables
 	end
 end
 

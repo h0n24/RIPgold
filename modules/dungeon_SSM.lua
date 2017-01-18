@@ -10,9 +10,6 @@ SSM.null = setmetatable ({}, {
 })
 
 -- STATUS: 100% complete
--- What needs more testing: last boss challenge
-
--- todo: write whisp message to people who are dead after 2s after spirit relics being placed "you can rezz up"
 
 -----------------------------------------------------------------------------------------------
 -- All Bosses
@@ -31,22 +28,27 @@ function SSM:OnPublicEventStatsUpdate(self)
 
 					local sToChat = string.format("After everyone got blinded, there was no Shadow of Selene the Corrupted MOOed or killed. Challenge is lost.")
 					self:InformOthers(sToChat, true, false)
+					self.hlp.alreadyFailedChallenge = true --workaround for multiple tooltips happenning, probably function above is slower than EventStatsUpdate
 				end
 			end
 		end
 	end
 
-	if self.hlp.event["Spiritual Revival with Selene"] == 0 then
-		if not self.hlp.alreadyFailedChallenge then
-			local sToChatMin = "Shadows weren't MOOed or killed."
-			self:AddTooltips(sToChatMin)
+	-- writes to people that they can ressurect up after all totems are placed
+	if self.hlp.event["Spiritual Revival with Selene at full health"] == 1 then
+		if not self.hlp.alreadyRezzedUp then
 
-			local sToChat = string.format("After everyone got blinded, there was no Shadow of Selene the Corrupted MOOed or killed. Challenge is lost.")
-			self:InformOthers(sToChat, true, false)
+			if self.get.GroupMaxSize ~= 0 then -- only announces when in group
+				for nGroupIndex=1, self.get.GroupMaxSize do
+					if self.hlp.player[nGroupIndex].dead == true then
+						local message = "You can ressurect now."
+						ChatSystemLib.Command("/w "..self.hlp.player[nGroupIndex].name.." "..message)
+					end
+				end
+			end
+			self.hlp.alreadyRezzedUp = true
 		end
 	end
-
-	--SendVarToRover("SSM:OnPublicEventStatsUpdate ", self.hlp.event_testing)
 end
 
 
@@ -131,18 +133,14 @@ function SSM:OnCombatLogVitalModifier(self, tEventArgs)
 
 					if getDebuffName == "Resonance" then
 						local getTarget = tEventArgs.unitTarget:GetName()
-						--local sToChat = string.format("%s resonance stacks",getTarget)
-						--SendVarToRover(sToChat, buff.nCount)
-						--self:Debug(sToChat..": "..buff.nCount)
+						self:Rover(buff.nCount,false,getTarget.." resonance stacks")
 
-						local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- it's 5 when in group, 0 when alone
-
-						if getGroupMaxSize == 0 then
+						if self.get.GroupMaxSize == 0 then
 							if buff.nCount > self.hlp.ShallaosStacks[1] then
 								self.hlp.ShallaosStacks[1] = buff.nCount
 							end
 						else
-							for nGroupIndex=1,getGroupMaxSize do
+							for nGroupIndex=1,self.get.GroupMaxSize do
 
 								local getGroupMember = GroupLib.GetGroupMember(nGroupIndex); 
 								if getGroupMember ~= nil then

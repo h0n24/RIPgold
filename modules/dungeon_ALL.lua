@@ -75,36 +75,122 @@ end
 
 function ALL:PreparePlayers(self)
 
+	local baseTooltip = "Yours or your team fails: \n\n"
 	self.hlp.player = {
-		[1] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
-		[2] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
-		[3] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
-		[4] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
-		[5] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = ""},
+		[1] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = baseTooltip}, ["ilvl"] = 0, ["hero"] = 0, ["dungs"] = 0,
+		[2] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = baseTooltip}, ["ilvl"] = 0, ["hero"] = 0, ["dungs"] = 0,
+		[3] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = baseTooltip}, ["ilvl"] = 0, ["hero"] = 0, ["dungs"] = 0,
+		[4] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = baseTooltip}, ["ilvl"] = 0, ["hero"] = 0, ["dungs"] = 0,
+		[5] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = baseTooltip}, ["ilvl"] = 0, ["hero"] = 0, ["dungs"] = 0,
 	}
 
-	local getGroupMaxSize = GroupLib.GetGroupMaxSize() -- its 5 when in group, 0 when alone
-
-	if getGroupMaxSize == 0 then
+	if self.get.GroupMaxSize == 0 then
 
 		function GetPlayerName()
 		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetName() ~= nil
 		end
 
 		if pcall(GetPlayerName) then
-			local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
-			self.hlp.player[1].name = getCurrentPlayerName
+			self.hlp.player[1].name = GameLib.GetPlayerUnit(1):GetName()
 		end
 
 	else
 
-		for nGroupIndex=1,getGroupMaxSize do 
+		for nGroupIndex=1,self.get.GroupMaxSize do 
 
 			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 			if getGroupMember ~= nil then
+				self.hlp.player[nGroupIndex].name = getGroupMember.strCharacterName
+			end
+		end
+	end
 
-				local getGroupMemberName = getGroupMember.strCharacterName
-				self.hlp.player[nGroupIndex].name = getGroupMemberName
+	ALL:getTooltipStats(self)
+end
+
+function ALL:getTooltipStats(self)
+
+	if self.get.GroupMaxSize == 0 or self.get.GroupMaxSize > 5 then
+		function Getilvl()
+		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetEffectiveItemLevel() ~= nil
+		end
+		if pcall(Getilvl) then
+			self.hlp.player[1].ilvl = Apollo.FormatNumber(GameLib.GetPlayerUnit(1):GetEffectiveItemLevel() or 0, 0, true)
+		end
+		function GetHero()
+		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetHeroism() ~= nil
+		end
+		if pcall(GetHero) then
+			self.hlp.player[1].hero = Apollo.FormatNumber(GameLib.GetPlayerUnit(1):GetHeroism() or 0, 0, true)
+		end
+		-- get dungeons completed stat
+		local getPlayerName = GameLib.GetPlayerUnit(1):GetName()
+		if self.rat[getPlayerName].dungs ~= nil then
+			self.hlp.player[1].dungs = self.rat[getPlayerName].dungs
+		end
+	else
+		for nGroupIndex=1,self.get.GroupMaxSize do 
+			local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
+			local getPlayersName = self.hlp.player[nGroupIndex].name
+
+			if getGroupMember ~= nil then
+
+				-- get ilvl stat
+				function Getilvl()
+				   local getBossBuffs = GroupLib.GetUnitForGroupMember(nGroupIndex):GetEffectiveItemLevel() ~= nil
+				end
+				if pcall(Getilvl) then
+					local ilvl = GroupLib.GetUnitForGroupMember(nGroupIndex):GetEffectiveItemLevel()
+
+					if self.hlp.player[nGroupIndex].ilvl == nil then self.hlp.player[nGroupIndex].ilvl = 0 end
+					if tonumber(self.hlp.player[nGroupIndex].ilvl) < ilvl then
+						self.hlp.player[nGroupIndex].ilvl = Apollo.FormatNumber(GroupLib.GetUnitForGroupMember(nGroupIndex):GetEffectiveItemLevel() or 0, 0, true)
+					end
+
+					if self.rat[self.hlp.player[nGroupIndex].name].ilvl ~= nil then
+						if self.rat[self.hlp.player[nGroupIndex].name].ilvl > self.hlp.player[nGroupIndex].ilvl then
+							self.hlp.player[nGroupIndex].ilvl = self.rat[self.hlp.player[nGroupIndex].name].ilvl
+						end
+					end
+				else
+					if getPlayersName then
+						if self.rat[getPlayersName] ~= nil and self.rat[getPlayersName].ilvl ~= nil then
+							self.hlp.player[nGroupIndex].ilvl = self.rat[getPlayersName].ilvl
+						end
+					end
+				end
+
+				-- get heroism stat
+				function GetHero()
+				   local getBossBuffs = GroupLib.GetUnitForGroupMember(nGroupIndex):GetHeroism() ~= nil
+				end
+				if pcall(GetHero) then
+					local hero = GroupLib.GetUnitForGroupMember(nGroupIndex):GetHeroism()
+
+					if self.hlp.player[nGroupIndex].hero == nil then self.hlp.player[nGroupIndex].hero = 0 end
+					if tonumber(self.hlp.player[nGroupIndex].hero) < hero then
+						self.hlp.player[nGroupIndex].hero = Apollo.FormatNumber(GroupLib.GetUnitForGroupMember(nGroupIndex):GetHeroism() or 0, 0, true)
+					end
+
+					if self.rat[self.hlp.player[nGroupIndex].name].hero ~= nil then
+						if self.rat[self.hlp.player[nGroupIndex].name].hero > self.hlp.player[nGroupIndex].hero then
+							self.hlp.player[nGroupIndex].hero = self.rat[self.hlp.player[nGroupIndex].name].hero
+						end
+					end					
+				else
+					if getPlayersName then
+						if self.rat[getPlayersName] ~= nil and self.rat[getPlayersName].hero ~= nil then
+							self.hlp.player[nGroupIndex].hero = self.rat[getPlayersName].hero
+						end
+					end
+				end
+
+				-- get dungeons completed stat
+				if getPlayersName then
+					if self.rat[getPlayersName] ~= nil and self.rat[getPlayersName].dungs ~= nil then
+						self.hlp.player[nGroupIndex].dungs = self.rat[getPlayersName].dungs
+					end
+				end
 			end
 		end
 	end
@@ -112,29 +198,23 @@ end
 
 function ALL:CheckForPlayerDeaths(self)
 
-	if self.hlp.isInDungeon then 
-
-		local getGroupMaxSize = GroupLib.GetGroupMaxSize()
-		if getGroupMaxSize == 0 then
+	if self.hlp.isInDungeon then
+		if self.get.GroupMaxSize == 0 then
 			
 			local getDeathState = GameLib.GetPlayerUnit(1):IsDead()
 			local getName = GameLib.GetPlayerUnit(1):GetName()
 			local nGroupIndex = 1
-
 			ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
 		else
-			for nGroupIndex=1, getGroupMaxSize do
+			for nGroupIndex=1, self.get.GroupMaxSize do
 				local getGroupMember = GroupLib.GetGroupMember(nGroupIndex)
 
 				if getGroupMember ~= nil then
-
 					local getGroupMemberUnit = GroupLib.GetUnitForGroupMember(nGroupIndex)
 
 					if getGroupMemberUnit ~= nil then
 						local getDeathState = getGroupMemberUnit:IsDead()
 						local getGroupMemberName = getGroupMember.strCharacterName
-						--local getDeadPlayerName = getGroupMemberUnit:GetName() -- possibly not needed
-
 						ALL:IsPlayerDead(self, getDeathState, getGroupMemberName, nGroupIndex)
 					end
 				end
@@ -162,11 +242,10 @@ function ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
 
 					local sToChat = string.format("%s just fucked up deathless challenge. RIPgold. :(.", getName)
 					self:InformOthers(sToChat, false, true)
-					self:Debug(getName .. " ruined deathless.")
+					self:Rover(getName, false, "ruined deathless.")
 					self.hlp.alreadyFailedDeathless = true
 				end
-
-				self:Debug(getName .. " is dead.")
+				self:Rover(getName, false, "is dead.")
 				self.hlp.player[nGroupIndex].dead = true
 				self:CountFails(getName)
 			end
@@ -174,7 +253,7 @@ function ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
 	else
 		if self.hlp.player[nGroupIndex].dead then
 
-			self:Debug(getName .. " is alive.")
+			self:Rover(getName, false, "is alive.")
 			self.hlp.player[nGroupIndex].dead = false
 		end
 	end
@@ -211,8 +290,6 @@ function ALL:HowManyFails(self)
 				failWord = "fail"
 			end
 
-			-- supernew function
-			--if self.rat ~= nil then
 			if self:setContains(self.rat, self.hlp.player[i].name) then
 				
 				local rating = self.rat[self.hlp.player[i].name]["rating"]
@@ -225,6 +302,8 @@ function ALL:HowManyFails(self)
 				self.rat[self.hlp.player[i].name]["fails"] = self.rat[self.hlp.player[i].name]["fails"] + self.hlp.player[i].fails
 				self.rat[self.hlp.player[i].name]["rating"] = rating
 				self.rat[self.hlp.player[i].name]["dungs"] = self.rat[self.hlp.player[i].name]["dungs"] + 1
+				self.rat[self.hlp.player[i].name]["ilvl"] = self.hlp.player[i].ilvl
+				self.rat[self.hlp.player[i].name]["hero"] = self.hlp.player[i].hero
 			else
 
 				local rating = 1000
@@ -238,15 +317,14 @@ function ALL:HowManyFails(self)
 				self.rat[self.hlp.player[i].name]["fails"] = self.hlp.player[i].fails
 				self.rat[self.hlp.player[i].name]["rating"] = rating
 				self.rat[self.hlp.player[i].name]["dungs"] = 1
+				self.rat[self.hlp.player[i].name]["ilvl"] = self.hlp.player[i].ilvl
+				self.rat[self.hlp.player[i].name]["hero"] = self.hlp.player[i].hero
 			end
-			--end
 
 			sToChat = string.format("%s %s, %s rating", self.hlp.player[i].fails, failWord, self.rat[self.hlp.player[i].name]["rating"])
 			self:Debug(self.hlp.player[i].name .. ": ".. sToChat)
 		end
 	end
-
-	SendVarToRover("self.rat",self.rat)
 
 	if GroupLib.AmILeader() then
 		ChatSystemLib.Command("/rq") -- proceeds reQue after end of dungeon if you are a leader
@@ -295,11 +373,11 @@ function ALL:checkForBossDeaths(self)
 					self:REDIR_ALL_HowManyFails()
 				end
 				if self.hlp.isBossDead.name == "Wrathbone" then
-					--ALL:HowManyFails(self)
+					--self:REDIR_ALL_HowManyFails() --future reference
 				end
 
 				if self.hlp.isBossDead.name == "Blade-Wind the Invoker" then
-					self.hlp.doesChannelerExists:Stop() --test if it's working
+					self.hlp.doesChannelerExists:Stop()
 				end
 				if self.hlp.isBossDead.name == "Bosun Octog" then
 					if self.hlp.OctogStacks < 10 then
@@ -319,7 +397,6 @@ function ALL:checkForBossDeaths(self)
 				end
 
 				self:Debug(self.hlp.isBossDead.name .. " is dead.")
-				--SendVarToRover("boss", self.hlp.isBossDead)
 			end
 		end
 	end

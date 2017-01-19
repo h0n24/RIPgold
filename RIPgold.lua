@@ -45,7 +45,7 @@ local UIs = Apollo.GetPackage("Module:UIs-1.0").tPackage
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
--- e.g. local kiExampleVariableMax = 999
+-- 
  
 -----------------------------------------------------------------------------------------------
 -- Initialization
@@ -108,11 +108,11 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterSlashCommand("rip", "OnRIPgoldOn", self)
 
 		-- core event handlers
-		Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
-		Apollo.RegisterEventHandler("CombatLogDamage", "OnCombatLogDamage", self)
-		Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
-		Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
-		Apollo.RegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
+		--Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
+		--Apollo.RegisterEventHandler("CombatLogDamage", "OnCombatLogDamage", self)
+		--Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
+		--Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
+		--Apollo.RegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
 		Apollo.RegisterEventHandler("PublicEventStart",	"OnPublicEventStart", self)
 		Apollo.RegisterEventHandler("PublicEventStatsUpdate", "OnPublicEventStatsUpdate", self)
 		Apollo.RegisterEventHandler("ChangeWorld", "OnWorldChange", self)
@@ -129,6 +129,8 @@ function RIPgold:OnDocLoaded()
 		Apollo.RegisterEventHandler("Group_Remove", "OnGroup_Remove", self)
 
 		-- ApolloTimer variables → first says in seconds how often is repeated, second if its repeating
+
+
 		self.checkDeadState = ApolloTimer.Create(1, true, "REDIR_checkForPlayerDeaths", self) 
 		self.checkDeadState:Stop()
 
@@ -264,6 +266,12 @@ function RIPgold:OnPublicEventStart()
 
 				self.hlp.isInDungeon = true
 
+				-- adds event handlers (+onUnitCreated is outside of this in world change)
+				Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
+				Apollo.RegisterEventHandler("CombatLogDamage", "OnCombatLogDamage", self)
+				Apollo.RegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
+				Apollo.RegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
+
 				ALL:InitializeVars(self)
 				ALL:PreparePlayers(self)
 
@@ -335,11 +343,33 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 	end --if in dungeon
 end
 
+function RIPgold:DelayedEventHandlerRemoval()
+	-- removes unnecessary handlers, delayed by 30s mainly because OnUnitCreated handler has to have some time in dungeons to proceed, anyway while swapping it will only process OnUnitCreated because rest of handlers is being set after OnPublicEventStart
+	if self.hlp.isInDungeon == false then
+		self:Rover("DelayedEventHandlerRemoval", false, "	")
+
+		Apollo.RemoveEventHandler("UnitCreated", self)
+		Apollo.RemoveEventHandler("UnitDestroyed", self)
+		Apollo.RemoveEventHandler("UnitEnteredCombat", self)
+		Apollo.RemoveEventHandler("CombatLogDamage", self)
+		Apollo.RemoveEventHandler("UnitDestroyed", self)
+		Apollo.RemoveEventHandler("CombatLogVitalModifier", self)
+
+		self.checkDeadState:Stop() -- stops "REDIR_checkForPlayerDeaths" function
+	end
+end
+
 function RIPgold:OnWorldChange()
 
 	-- updated function: resets only info about match, not resetting everything every world change
 	self.hlp.peMatch = nil
 	self.hlp.isInDungeon = false
+
+	-- adds OnUnitCreated (has to be outside cuz some units are created right after entering dung)
+	Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
+	-- and this OnUnitCreated handler will be deleted with other handlers if not in dungeon
+	-- 30 seconds should be enough to load any dungeon
+	self.delayedRemoveEventHandler = ApolloTimer.Create(30, false, "DelayedEventHandlerRemoval", self) 
 
 	UIn:OnBTN_statsClick(self)
 end
@@ -458,8 +488,7 @@ function RIPgold:OnGroup_Left(var)
 		UIn:OnBTN_statsClick(self)
 	end
 
-	-- somehow not working 100% but why? would help af
-	-- better version -> OnGroup_Remove
+	-- works only when player solo leaves group
 end
 
 function RIPgold:OnGroup_Remove(var)
@@ -469,23 +498,23 @@ function RIPgold:OnGroup_Remove(var)
 		UIn:OnBTN_statsClick(self)
 	end
 	-- seems to be working everytime someone leaves party -> best function whatsoever
-
+	-- working even in dungeons
 end
 
 function RIPgold:OnGroup_Player_Left(var)
 	self:Rover(var, true, "OnGroup_Player_Left")
 
-	if self.hlp.isInDungeon == false then
-		UIn:OnBTN_statsClick(self)
-	end
+	-- if self.hlp.isInDungeon == false then
+	-- 	UIn:OnBTN_statsClick(self)
+	-- end
 end
 
 function RIPgold:OnGroup_Other_Left(var)
 	self:Rover(var, true, "OnGroup_Other_Left")
 
-	if self.hlp.isInDungeon == false then
-		UIn:OnBTN_statsClick(self)
-	end
+	-- if self.hlp.isInDungeon == false then
+	-- 	UIn:OnBTN_statsClick(self)
+	-- end
 end
 
 function RIPgold:OnGroup_Disbanded(var)
@@ -517,6 +546,7 @@ function RIPgold:OnGroup_Updated(var)
 
 	--self:Rover(var, true, "OnGroup_Updated")
 	--UIn:OnBTN_statsClick(self)
+
 end
 
 -----------------------------------------------------------------------------------------------

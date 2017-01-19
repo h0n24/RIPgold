@@ -68,7 +68,7 @@ function UIr:OnBTN_ratingsClick(self)
     local i = 0
 	for index,rating in spairs(tableRating, function(t,a,b) return t[b] < t[a] end) do
 		i = i+1
-		if i < 10 then
+		if i < 11 then
 			local tRow = self.wndMain:FindChild("TABLE_rating"):AddRow("")
 		    self.wndMain:FindChild("TABLE_rating"):SetCellText(tRow, 1, index)
 
@@ -80,7 +80,7 @@ function UIr:OnBTN_ratingsClick(self)
     local i = 0
 	for index,dungs in spairs(tableDungs, function(t,a,b) return t[b] < t[a] end) do
 		i = i+1
-		if i < 10 then
+		if i < 11 then
 			local tRow = self.wndMain:FindChild("TABLE_dungs"):AddRow("")
 		    self.wndMain:FindChild("TABLE_dungs"):SetCellText(tRow, 1, index)
 		    self.wndMain:FindChild("TABLE_dungs"):SetCellText(tRow, 2, dungs)

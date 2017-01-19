@@ -37,7 +37,7 @@ function UIn:OnBTN_statsClick(self)
 	self.wndMain:FindChild("COMB_role"):AddItem("rating", "test", nil)
 	self.wndMain:FindChild("COMB_role"):AddItem("k+ dps", "test", nil)
 	self.wndMain:FindChild("COMB_role"):AddItem("ilvl", "test", nil)
-	self.wndMain:FindChild("COMB_role"):AddItem("primelvl", "test", nil)
+	self.wndMain:FindChild("COMB_role"):AddItem("prime", "test", nil)
 
 	if not self.set.COMB_roleIndex then
 		-- set original values
@@ -278,7 +278,7 @@ function UIn:UpdateAnnounceTextBase(self, announcingText, missingMembers)
 	elseif self.set.COMB_roleIndex == 3 then
 		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "+ ilvl" -- example: 100+ ilvl
 	elseif self.set.COMB_roleIndex == 4 then
-		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "+ primelvl" -- example: 10+ prime
+		announcingText = announcingText .. ", " .. self.set.BOX_announce[self.set.COMB_roleIndex] .. "+ tier" -- example: 10+ prime
 	end
 
 	if self.set.CHCK_PLZ_dps == true or self.set.CHCK_PLZ_heal == true or self.set.CHCK_PLZ_tank == true then

@@ -113,7 +113,7 @@ function SSM:OnCombatLogVitalModifier(self, tEventArgs)
 	if tEventArgs.unitCaster:GetName() == "Spiritmother Selene's Echo" then
 
 		-- automatic focus
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(tEventArgs.unitCaster)
+		GameLib.GetPlayerUnit():SetAlternateTarget(tEventArgs.unitCaster)
 
 		local SeleneHealth = tEventArgs.unitCaster:GetHealth()
 		local SeleneMaxHealth = tEventArgs.unitCaster:GetMaxHealth()
@@ -270,7 +270,7 @@ function SSM:OnUnitCreated(self, unit)
 	if getUnitName == "Spiritmother Selene" then
 
 		-- automatically clears focus
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(0)
+		GameLib.GetPlayerUnit():SetAlternateTarget(0)
 
 		local SelenePercentage = self.hlp.SelenePercentage * 100
 
@@ -303,10 +303,10 @@ function SSM:checkForRelicOfBlood(self)
 		self:InformOthers(sToChat, false, false)
 
 		-- set focus on torine relic and calls itself (will keep announcing untill collected)
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(self.hlp.TorineRelicsUnit)
+		GameLib.GetPlayerUnit():SetAlternateTarget(self.hlp.TorineRelicsUnit)
 		self.hlp.doesRelicBloodExist:Start()
 	else
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(0)
+		GameLib.GetPlayerUnit():SetAlternateTarget(0)
 	end
 end
 

@@ -21,6 +21,8 @@ require "Apollo"
 require "Window"
 require "GroupLib"
 require "GameLib"
+require "ICCommLib"
+require "ICComm"
  
 -----------------------------------------------------------------------------------------------
 -- RIPgold Module Definition
@@ -106,6 +108,7 @@ function RIPgold:OnDocLoaded()
 
 		-- slash commands
 		Apollo.RegisterSlashCommand("rip", "OnRIPgoldOn", self)
+		Apollo.RegisterSlashCommand("rtest", "OnRTest", self)
 
 		-- core event handlers
 		--Apollo.RegisterEventHandler("UnitEnteredCombat", "OnCombat", self)
@@ -120,17 +123,15 @@ function RIPgold:OnDocLoaded()
 		-- Group related handlers, currently in testing → todo: simplify to most effective group management
 		Apollo.RegisterEventHandler("Group_Join", "OnGroup_Join", self)
 		Apollo.RegisterEventHandler("Group_Left", "OnGroup_Left", self)
-		Apollo.RegisterEventHandler("Group_Player_Left", "OnGroup_Player_Left", self)
+		--Apollo.RegisterEventHandler("Group_Player_Left", "OnGroup_Player_Left", self)
 		Apollo.RegisterEventHandler("Group_Disbanded", "OnGroup_Disbanded", self)
 		Apollo.RegisterEventHandler("Group_Add", "OnGroup_Add", self)
 		Apollo.RegisterEventHandler("Group_Changed", "OnGroup_Changed", self)
-		Apollo.RegisterEventHandler("Group_Other_Left", "OnGroup_Other_Left", self)
-		Apollo.RegisterEventHandler("Group_Updated", "OnGroup_Updated", self)
+		--Apollo.RegisterEventHandler("Group_Other_Left", "OnGroup_Other_Left", self)
+		--Apollo.RegisterEventHandler("Group_Updated", "OnGroup_Updated", self)
 		Apollo.RegisterEventHandler("Group_Remove", "OnGroup_Remove", self)
 
 		-- ApolloTimer variables → first says in seconds how often is repeated, second if its repeating
-
-
 		self.checkDeadState = ApolloTimer.Create(1, true, "REDIR_checkForPlayerDeaths", self) 
 		self.checkDeadState:Stop()
 
@@ -170,7 +171,7 @@ function RIPgold:OnDocLoaded()
 		end
 
 		if self.rat == nil then
-			local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+			local getCurrentPlayerName = GameLib.GetPlayerUnit():GetName()
 			self.rat[getCurrentPlayerName] = {}
 			self.rat[getCurrentPlayerName]["fails"] = 0
 			self.rat[getCurrentPlayerName]["rating"] = 1000
@@ -299,7 +300,9 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			end
 
 			self.hlp.isInDungeon = true
-			self.checkDeadState:Start()
+			if self.checkDeadState == false then
+				self.checkDeadState:Start()
+			end
 
 			local nCurrentPoints = peUpdated:GetStat(PublicEvent.PublicEventStatType.MedalPoints)
 			if self.hlp.nPoints == nCurrentPoints then
@@ -328,7 +331,7 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 					self.hlp.event[eventName] = eventStatus
 				end
 
-				-- specifically for collecting torine relics
+				-- specifically for collecting torine relics (they aren't gold medal conected achievement)
 				if obj:GetShortDescription() == "Collect Torine Spirit-Relics" then
 					self.hlp.TorineRelicsCount = obj:GetCount()
 				end
@@ -340,13 +343,17 @@ function RIPgold:OnPublicEventStatsUpdate(peUpdated)
 			SC:OnPublicEventStatsUpdate(self)
 			SSM:OnPublicEventStatsUpdate(self)
 		end
+	else
+		self.get.GroupMaxSize = GroupLib.GetGroupMaxSize()
 	end --if in dungeon
+
+
 end
 
 function RIPgold:DelayedEventHandlerRemoval()
 	-- removes unnecessary handlers, delayed by 30s mainly because OnUnitCreated handler has to have some time in dungeons to proceed, anyway while swapping it will only process OnUnitCreated because rest of handlers is being set after OnPublicEventStart
 	if self.hlp.isInDungeon == false then
-		self:Rover("DelayedEventHandlerRemoval", false, "	")
+		self:Debug("DelayedEventHandlerRemoval processed.")
 
 		Apollo.RemoveEventHandler("UnitCreated", self)
 		Apollo.RemoveEventHandler("UnitDestroyed", self)
@@ -354,7 +361,6 @@ function RIPgold:DelayedEventHandlerRemoval()
 		Apollo.RemoveEventHandler("CombatLogDamage", self)
 		Apollo.RemoveEventHandler("UnitDestroyed", self)
 		Apollo.RemoveEventHandler("CombatLogVitalModifier", self)
-
 		self.checkDeadState:Stop() -- stops "REDIR_checkForPlayerDeaths" function
 	end
 end
@@ -364,6 +370,9 @@ function RIPgold:OnWorldChange()
 	-- updated function: resets only info about match, not resetting everything every world change
 	self.hlp.peMatch = nil
 	self.hlp.isInDungeon = false
+
+	-- updates alert info on icon
+	self:UpdateUIAlert(0, "")
 
 	-- adds OnUnitCreated (has to be outside cuz some units are created right after entering dung)
 	Apollo.RegisterEventHandler("UnitCreated", "OnUnitCreated", self)
@@ -592,7 +601,7 @@ end
 
 function RIPgold:UpdateUIAlertForced() --updates icon alert
 
-	local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+	local getCurrentPlayerName = GameLib.GetPlayerUnit():GetName()
 	for i=1,5 do
 		if getCurrentPlayerName == self.hlp.player[i].name then
 			if self.hlp.player[i].fails > 0 then
@@ -604,7 +613,7 @@ end
 
 function RIPgold:CountFails(getTarget)
 	-- variables
-	local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+	local getCurrentPlayerName = GameLib.GetPlayerUnit():GetName()
 
 	-- sounds when player fails
 	if getTarget == getCurrentPlayerName then
@@ -661,7 +670,7 @@ function RIPgold:AddFails()
 				local getFailsOld = self.hlp.player[nGroupIndex].fails
 				self.hlp.player[nGroupIndex].fails = getFailsOld + 1
 
-				if GameLib.GetPlayerUnit(1):GetName() == self.hlp.player[nGroupIndex].name then
+				if GameLib.GetPlayerUnit():GetName() == self.hlp.player[nGroupIndex].name then
 					self:UpdateUIAlert(self.hlp.player[nGroupIndex].fails, self.hlp.player[nGroupIndex].tooltip)
 				end
 			end
@@ -763,6 +772,16 @@ function RIPgold:OnRIPgoldOn()
 
 	self.wndMain:Invoke() -- show the window
 end
+
+-- on SlashCommand "/rtest"
+function RIPgold:OnRTest()
+
+	ALL:PreparePlayers(self)
+
+	self:Debug("Rtest")
+end
+
+ 
 
 -- when the Cancel button is clicked
 function RIPgold:OnCancel()

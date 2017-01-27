@@ -144,8 +144,10 @@ function UIn:UpdateRIPgoldStats(self)
 		    		RRtooltip = RRtooltip.."ilvl: "..ilvl.."\n\n"
 		    	end
 
-		    	local heroism = self.hlp.player[i].hero
-		    	if heroism  ~= nil and tonumber(heroism) > 0 then 
+		    	local heroism = tonumber(self.hlp.player[i].hero)
+		    	if heroism == nil then heroism = 0 end
+
+		    	if heroism > 0 then 
 					RRtooltip = RRtooltip.."heroism: "..heroism.."\n\n"
 				end
 
@@ -239,6 +241,8 @@ function UIn:UpdateAnnounce(self)
 	self.hlp.announcingTextGen = announcingText
 
 	if self.hlp.announcingTextCustom ~= self.hlp.announcingTextGen then
+
+		if self.hlp.lastAnnouncingTextGen == nil then self.hlp.lastAnnouncingTextGen = "" end
 
 		local textDiffLen = string.len(self.hlp.lastAnnouncingTextGen) + 1 --has to be +1!
 		local cutText = string.sub(self.hlp.announcingTextCustom, textDiffLen)

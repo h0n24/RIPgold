@@ -61,7 +61,7 @@ function UIr:OnBTN_ratingsClick(self)
     end
 
     -- removes current player ("myself") from statistics
-    local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
+    local getCurrentPlayerName = GameLib.GetPlayerUnit():GetName()
     self:removeFromSet(tableRating, getCurrentPlayerName)
     self:removeFromSet(tableDungs, getCurrentPlayerName)
 

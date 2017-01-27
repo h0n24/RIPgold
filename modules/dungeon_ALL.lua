@@ -75,6 +75,8 @@ end
 
 function ALL:PreparePlayers(self)
 
+	self.get.GroupMaxSize = GroupLib.GetGroupMaxSize()
+
 	local baseTooltip = "Yours or your team fails: \n\n"
 	self.hlp.player = {
 		[1] = {["name"] = "", ["fails"] = 0, ["dead"] = false, ["tooltip"] = baseTooltip}, ["ilvl"] = 0, ["hero"] = 0, ["dungs"] = 0,
@@ -87,11 +89,11 @@ function ALL:PreparePlayers(self)
 	if self.get.GroupMaxSize == 0 then
 
 		function GetPlayerName()
-		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetName() ~= nil
+		   local getBossBuffs = GameLib.GetPlayerUnit():GetName() ~= nil
 		end
 
 		if pcall(GetPlayerName) then
-			self.hlp.player[1].name = GameLib.GetPlayerUnit(1):GetName()
+			self.hlp.player[1].name = GameLib.GetPlayerUnit():GetName()
 		end
 
 	else
@@ -112,24 +114,24 @@ function ALL:getTooltipStats(self)
 
 	if self.get.GroupMaxSize == 0 or self.get.GroupMaxSize > 5 then
 		function Getilvl()
-		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetEffectiveItemLevel() ~= nil
+		   local getBossBuffs = GameLib.GetPlayerUnit():GetEffectiveItemLevel() ~= nil
 		end
 		if pcall(Getilvl) then
-			self.hlp.player[1].ilvl = Apollo.FormatNumber(GameLib.GetPlayerUnit(1):GetEffectiveItemLevel() or 0, 0, true)
+			self.hlp.player[1].ilvl = Apollo.FormatNumber(GameLib.GetPlayerUnit():GetEffectiveItemLevel() or 0, 0, true)
 		end
 		function GetHero()
-		   local getBossBuffs = GameLib.GetPlayerUnit(1):GetHeroism() ~= nil
+		   local getBossBuffs = GameLib.GetPlayerUnit():GetHeroism() ~= nil
 		end
 		if pcall(GetHero) then
-			self.hlp.player[1].hero = Apollo.FormatNumber(GameLib.GetPlayerUnit(1):GetHeroism() or 0, 0, true)
+			self.hlp.player[1].hero = Apollo.FormatNumber(GameLib.GetPlayerUnit():GetHeroism() or 0, 0, true)
 		end
 		-- get dungeons completed stat
 		function GetPlayerName()
-		   local get = GameLib.GetPlayerUnit(1):GetName() ~= nil
+		   local get = GameLib.GetPlayerUnit():GetName() ~= nil
 		end
 		if pcall(GetPlayerName) then
-			local playerName = GameLib.GetPlayerUnit(1):GetName()
-			if self.rat[playerName].dungs ~= nil then
+			local playerName = GameLib.GetPlayerUnit():GetName()
+			if self.rat[playerName] ~= nil and self.rat[playerName].dungs ~= nil then
 				self.hlp.player[1].dungs = self.rat[playerName].dungs
 			end
 		end
@@ -150,8 +152,10 @@ function ALL:getTooltipStats(self)
 					local ilvl = GroupLib.GetUnitForGroupMember(nGroupIndex):GetEffectiveItemLevel()
 
 					if self.hlp.player[nGroupIndex].ilvl == nil then self.hlp.player[nGroupIndex].ilvl = 0 end
+					if ilvl == nil then ilvl = 0 end
+
 					if tonumber(self.hlp.player[nGroupIndex].ilvl) < ilvl then
-						self.hlp.player[nGroupIndex].ilvl = Apollo.FormatNumber(GroupLib.GetUnitForGroupMember(nGroupIndex):GetEffectiveItemLevel() or 0, 0, true)
+						self.hlp.player[nGroupIndex].ilvl = Apollo.FormatNumber(ilvl or 0, 0, true)
 					end
 
 					if self.rat[getPlayersName] ~= nil then
@@ -175,10 +179,13 @@ function ALL:getTooltipStats(self)
 				end
 				if pcall(GetHero) then
 					local hero = GroupLib.GetUnitForGroupMember(nGroupIndex):GetHeroism()
+					local savedHero = tonumber(self.hlp.player[nGroupIndex].hero)
 
-					if self.hlp.player[nGroupIndex].hero == nil then self.hlp.player[nGroupIndex].hero = 0 end
-					if tonumber(self.hlp.player[nGroupIndex].hero) < hero then
-						self.hlp.player[nGroupIndex].hero = Apollo.FormatNumber(GroupLib.GetUnitForGroupMember(nGroupIndex):GetHeroism() or 0, 0, true)
+					if savedHero == nil then savedHero = 0 end
+					if hero == nil then hero = 0 end
+
+					if savedHero < hero then
+						self.hlp.player[nGroupIndex].hero = Apollo.FormatNumber(hero or 0, 0, true)
 					end
 
 					if self.rat[getPlayersName] ~= nil then
@@ -212,8 +219,8 @@ function ALL:CheckForPlayerDeaths(self)
 	if self.hlp.isInDungeon then
 		if self.get.GroupMaxSize == 0 then
 			
-			local getDeathState = GameLib.GetPlayerUnit(1):IsDead()
-			local getName = GameLib.GetPlayerUnit(1):GetName()
+			local getDeathState = GameLib.GetPlayerUnit():IsDead()
+			local getName = GameLib.GetPlayerUnit():GetName()
 			local nGroupIndex = 1
 			ALL:IsPlayerDead(self, getDeathState, getName, nGroupIndex)
 		else

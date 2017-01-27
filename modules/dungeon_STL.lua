@@ -202,12 +202,12 @@ function STL:getPlayerWithCircle(self, unit)
 
 	if self.get.GroupMaxSize == 0 then
 		function GetPlayerName()
-		   local getName = GameLib.GetPlayerUnit(1):GetName() ~= nil
+		   local getName = GameLib.GetPlayerUnit():GetName() ~= nil
 		end
 
 		if pcall(GetPlayerName) then
-			local getCurrentPlayerName = GameLib.GetPlayerUnit(1):GetName()
-			local playerPosition = GameLib.GetPlayerUnit(1):GetPosition()
+			local getCurrentPlayerName = GameLib.GetPlayerUnit():GetName()
+			local playerPosition = GameLib.GetPlayerUnit():GetPosition()
 
 			self.hlp.WindInvokerTargetPlayer["name"] = getCurrentPlayerName
 			self.hlp.WindInvokerTargetPlayer["x"] = playerPosition["x"]

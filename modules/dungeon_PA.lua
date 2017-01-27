@@ -30,21 +30,21 @@ end
 
 function PA:OnCombat_IN(self, unitInCombat)
 	if unitInCombat:GetName() == "Invulnotron" then
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(self.hlp.unitInvulnotron)
+		GameLib.GetPlayerUnit():SetAlternateTarget(self.hlp.unitInvulnotron)
 	end
 
 	if unitInCombat:GetName() == "Iruki Boldbeard" then
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(self.hlp.unitIruki)
+		GameLib.GetPlayerUnit():SetAlternateTarget(self.hlp.unitIruki)
 	end
 end
 
 function PA:OnCombat_OUT(self, unitInCombat)
 	if unitInCombat:GetName() == "Invulnotron" then
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(0)
+		GameLib.GetPlayerUnit():SetAlternateTarget(0)
 	end
 
 	if unitInCombat:GetName() == "Iruki Boldbeard" then
-		GameLib.GetPlayerUnit(1):SetAlternateTarget(0)
+		GameLib.GetPlayerUnit():SetAlternateTarget(0)
 	end
 end
 
